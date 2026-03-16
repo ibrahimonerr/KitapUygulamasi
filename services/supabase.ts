@@ -8,14 +8,42 @@ console.log('Supabase Configuration Check:');
 console.log('- URL defined:', !!supabaseUrl);
 console.log('- Key defined:', !!supabaseAnonKey);
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('CRITICAL: Supabase environment variables are missing! Authentication will not work.');
+let supabaseClient: any;
+
+try {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('CRITICAL: Supabase environment variables are missing!');
+    // We create a dummy client to prevent top-level extraction crashes
+    // If we throw here, the whole app might not load.
+    supabaseClient = {
+      auth: {
+        signUp: () => Promise.reject(new Error("Supabase konfigürasyonu eksik (ENV variables missing)")),
+        signInWithPassword: () => Promise.reject(new Error("Supabase konfigürasyonu eksik (ENV variables missing)")),
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error("Config missing") }),
+            limit: () => Promise.resolve({ data: null, error: new Error("Config missing") }),
+          }),
+          limit: () => Promise.resolve({ data: null, error: new Error("Config missing") }),
+        }),
+      }),
+    };
+  } else {
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  }
+} catch (e) {
+  console.error('Supabase Initialization Exception:', e);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = supabaseClient;
 
 // Diagnostic: Ping Supabase to verify connectivity
 const testConnection = async () => {
+  if (!supabaseUrl) return;
   try {
     const { data, error } = await supabase.from('profiles').select('id').limit(1);
     if (error) {

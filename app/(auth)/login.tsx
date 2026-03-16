@@ -15,7 +15,7 @@ const { width, height } = Dimensions.get('window');
 export default function Login() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, connectionError } = useAuth();
 
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [username, setUsername] = useState('');
@@ -31,19 +31,24 @@ export default function Login() {
 
     setLoading(true);
     console.log("Starting auth in mode:", isLoginMode ? "Giriş" : "Kayıt");
+    Alert.alert("Debug", `İşlem başlıyor: ${isLoginMode ? "Giriş" : "Kayıt"}`);
+    
     try {
       if (isLoginMode) {
+        Alert.alert("Debug", "signIn çağrılıyor...");
         await signIn(username, password);
         console.log("Sign in successful");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)/active');
       } else {
+        Alert.alert("Debug", "signUp çağrılıyor...");
         console.log("Calling signUp...");
         const result = await signUp(username, password, fullName);
         console.log("Sign up result:", result);
+        Alert.alert("Debug", `SignUp sonucu: ${result ? "Başarılı" : "Başarısız"}`);
         
         // If email confirmation is on, session will be null
-        if (result.session) {
+        if (result && result.session) {
           console.log("Sign up successful with session");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           router.replace('/(tabs)/active');
@@ -51,7 +56,7 @@ export default function Login() {
           console.log("Sign up successful, but pending confirmation (or session null)");
           Alert.alert(
             "Kayıt Başarılı", 
-            "Hesabınız oluşturuldu. Lütfen giriş yapmayı deneyin veya yönetici onayı bekleyin.",
+            "Hesabınız oluşturuldu. Lütfen giriş yapmayı deneyin.",
             [{ text: "Tamam", onPress: () => setIsLoginMode(true) }]
           );
         }
@@ -117,10 +122,18 @@ export default function Login() {
         </View>
 
         <View style={styles.content}>
-           <Animated.View entering={FadeInDown.duration(800)}>
+            <Animated.View entering={FadeInDown.duration(800)}>
               <Text style={[styles.title, { color: colors.text }]}>
                 {isLoginMode ? 'Tekrar Hoş Geldin' : 'Yeni Yolculuk Başlıyor'}
               </Text>
+
+              {connectionError && (
+                <View style={[styles.errorBox, { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: 'rgba(255, 59, 48, 0.3)' }]}>
+                  <Ionicons name="alert-circle" size={16} color="#FF3B30" />
+                  <Text style={styles.errorText}>Bağlantı Hatası: {connectionError}</Text>
+                </View>
+              )}
+
               <Text style={[styles.subtitle, { color: colors.textMuted }]}>
                 {isLoginMode 
                   ? 'Kullanıcı adın ve şifrenle kaldığın yerden devam et.' 
@@ -268,6 +281,21 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: FONTS.primary.regular,
     fontSize: 16,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontFamily: FONTS.primary.semiBold,
+    fontSize: 13,
+    flex: 1,
   },
   mainBtn: {
     height: 56,

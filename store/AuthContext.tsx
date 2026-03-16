@@ -6,6 +6,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  connectionError: string | null;
   signUp: (username: string, password: string, fullName: string) => Promise<any>;
   signIn: (username: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
@@ -24,13 +25,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("AuthProvider initializing...");
-    console.log("- Env URL:", process.env.EXPO_PUBLIC_SUPABASE_URL ? "Defined" : "MISSING");
+    const envUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    console.log("- Env URL:", envUrl ? "Defined" : "MISSING");
     
-    if (!supabase.auth) {
+    if (!envUrl) {
+      setConnectionError("Supabase URL bulunamadı. .env dosyasını kontrol edin.");
+    }
+
+    if (!supabase || !supabase.auth) {
       console.error("Supabase client not properly initialized!");
+      setConnectionError("Supabase istemcisi başlatılamadı.");
     }
 
     // Get initial session
@@ -119,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isLoading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, isLoading, connectionError, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
