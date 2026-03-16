@@ -38,16 +38,31 @@ export default function Login() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)/active');
       } else {
-        await signUp(username, password, fullName);
-        console.log("Sign up successful");
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(auth)/onboarding');
+        console.log("Calling signUp...");
+        const result = await signUp(username, password, fullName);
+        console.log("Sign up result:", result);
+        
+        // If email confirmation is on, session will be null
+        if (result.session) {
+          console.log("Sign up successful with session");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.replace('/(tabs)/active');
+        } else {
+          console.log("Sign up successful, but pending confirmation (or session null)");
+          Alert.alert(
+            "Kayıt Başarılı", 
+            "Hesabınız oluşturuldu. Lütfen giriş yapmayı deneyin veya yönetici onayı bekleyin.",
+            [{ text: "Tamam", onPress: () => setIsLoginMode(true) }]
+          );
+        }
       }
     } catch (error: any) {
-      console.error("Auth error:", error);
-      Alert.alert("Hata", error.message || "Girdiğiniz bilgiler hatalı olabilir veya sunucu bağlantısı kurulamadı.");
+      console.error("CRITICAL Auth error:", error);
+      const errorMsg = error.message || error.error_description || JSON.stringify(error);
+      Alert.alert("Hata", `İşlem başarısız: ${errorMsg}`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
+      console.log("Auth attempt finished");
       setLoading(false);
     }
   };
@@ -65,6 +80,15 @@ export default function Login() {
       -1,
       true
     );
+
+    // Diagnostic check on mount
+    const checkSupabase = async () => {
+      console.log("Login screen mounted, checking Supabase...");
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        Alert.alert("Konfigürasyon Hatası", "Supabase URL'i bulunamadı. Lütfen .env dosyasını kontrol edin ve sunucuyu yeniden başlatın.");
+      }
+    };
+    checkSupabase();
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({

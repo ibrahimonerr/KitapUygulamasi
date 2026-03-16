@@ -13,8 +13,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to format username to email for Supabase Auth requirement
-const formatUsernameToEmail = (username: string) => `${username.toLowerCase().trim()}@bilgeokur.local`;
+const formatUsernameToEmail = (username: string) => {
+  const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9]/g, '.');
+  const email = `${cleanUsername}@bilgeokur.com`;
+  console.log("Generated Email:", email);
+  return email;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -22,15 +26,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log("AuthProvider initializing...");
+    console.log("- Env URL:", process.env.EXPO_PUBLIC_SUPABASE_URL ? "Defined" : "MISSING");
+    
+    if (!supabase.auth) {
+      console.error("Supabase client not properly initialized!");
+    }
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Supabase Session Error:", error.message);
+        } else {
+          console.log("Supabase Session Check: Done", session ? "User active" : "No user");
+        }
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (err) {
+        console.error("Auth Init Error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    getInitialSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -43,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const email = formatUsernameToEmail(username);
     
     // 1. Sign up to Supabase Auth
+    console.log("Attempting Supabase Auth signUp for:", email);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -54,7 +79,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase Auth.signUp error:", error);
+      throw error;
+    }
+    console.log("Supabase Auth.signUp success, user id:", data.user?.id);
 
     // 2. Create profile entry (Handled via SQL Trigger normally, but manually here for local dev if needed)
     // SQL trigger is better but we can ensure it here

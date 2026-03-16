@@ -4,7 +4,30 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
+console.log('Supabase Configuration Check:');
+console.log('- URL defined:', !!supabaseUrl);
+console.log('- Key defined:', !!supabaseAnonKey);
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('CRITICAL: Supabase environment variables are missing! Authentication will not work.');
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Diagnostic: Ping Supabase to verify connectivity
+const testConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('profiles').select('id').limit(1);
+    if (error) {
+      console.warn('Supabase Connection Test (Profiles):', error.message);
+    } else {
+      console.log('Supabase Connection Test: SUCCESS');
+    }
+  } catch (err) {
+    console.error('Supabase Connection Test EXCEPTION:', err);
+  }
+};
+testConnection();
 
 /**
  * AI Brifinglerini getiren/kaydeden yardımcılar
