@@ -26,19 +26,10 @@ import * as Haptics from 'expo-haptics';
 const { width, height } = Dimensions.get('window');
 
 const STEPS = [
-  { id: 'intro', title: 'Antigravity', subtitle: 'Kişisel kütüphanen ve bilge okuma arkadaşın.' },
   { id: 'taste', title: 'Zevklerini Keşfedelim', subtitle: 'İlgini çeken yazarları ve türleri seç.' },
   { id: 'active', title: 'Şu An Ne Okuyorsun?', subtitle: 'Aktif okuma listene hemen ekleyelim.' },
   { id: 'finished', title: 'Biten Maceralar', subtitle: 'En son hangi kitabı bitirdin?' },
   { id: 'target', title: 'Sıradaki Hedef', subtitle: 'Okumayı planladığın bir kitap var mı?' }
-];
-
-const STEP_COLORS = [
-  ['#0A0E17', '#1A1F2E'], // Intro
-  ['#0F172A', '#1E293B'], // Taste
-  ['#1E1B4B', '#312E81'], // Active
-  ['#064E3B', '#065F46'], // Finished
-  ['#450A0A', '#7F1D1D'], // Target
 ];
 
 const AUTHORS_POOL = [
@@ -208,7 +199,6 @@ export default function Onboarding() {
               key={`${author}-${index}`} 
               entering={FadeIn.delay(index * 50)} 
               exiting={FadeOut.duration(200)}
-              style={{ transform: [{ scale: 1 }] }}
             >
               <TouchableOpacity 
                 activeOpacity={0.7}
@@ -228,7 +218,6 @@ export default function Onboarding() {
               key={`${genre}-${index}`} 
               entering={FadeIn.delay(index * 50)} 
               exiting={FadeOut.duration(200)}
-              style={{ transform: [{ scale: 1 }] }}
             >
               <TouchableOpacity 
                 activeOpacity={0.7}
@@ -308,61 +297,25 @@ export default function Onboarding() {
       </View>
     </Animated.View>
   );
-  
-  const renderHeroStep = () => {
-    const pulseStyle = useAnimatedStyle(() => {
-      return {
-        transform: [
-          { scale: withRepeat(withSequence(withTiming(1.1, { duration: 2000 }), withTiming(1, { duration: 2000 })), -1, true) }
-        ],
-        opacity: withRepeat(withSequence(withTiming(0.2, { duration: 2000 }), withTiming(0.1, { duration: 2000 })), -1, true),
-      };
-    });
-
-    return (
-      <Animated.View entering={FadeIn.duration(1000)} style={styles.heroContainer}>
-        <Animated.View style={[styles.heroGlowContainer, pulseStyle]}>
-          <View style={[styles.heroGlow, { backgroundColor: colors.primary }]} />
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(500).springify()} style={styles.brandingContainer}>
-          <Ionicons name="sparkles" size={60} color={colors.primary} />
-          <Text style={[styles.brandingTitle, { color: colors.text }]}>Antigravity</Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(700).springify()}>
-          <Text style={[styles.heroDescription, { color: colors.text }]}>
-            Okuma eylemini bir disiplinden öte, zihinsel bir yolculuğa dönüştür.
-          </Text>
-        </Animated.View>
-      </Animated.View>
-    );
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View style={StyleSheet.absoluteFill}>
-        <LinearGradient 
-          colors={STEP_COLORS[currentStep] as any} 
-          style={StyleSheet.absoluteFill} 
-        />
-      </Animated.View>
+      <LinearGradient colors={[colors.background, isDark ? '#1a1f2e' : '#FFFFFF']} style={StyleSheet.absoluteFill} />
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <View style={styles.progressBarBg}>
-            <Animated.View style={[styles.progressBar, { backgroundColor: colors.primary, width: `${((currentStep + 1) / STEPS.length) * 100}%` }]} />
+            <Animated.View style={[styles.progressBar, { backgroundColor: colors.primary, width: `${(currentStep + 1) * 25}%` }]} />
           </View>
           <Text style={[styles.stepTitle, { color: colors.text }]}>{STEPS[currentStep].title}</Text>
           <Text style={[styles.stepSubtitle, { color: colors.textMuted }]}>{STEPS[currentStep].subtitle}</Text>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {currentStep === 0 && renderHeroStep()}
-          {currentStep === 1 && renderTasteStep()}
-          {currentStep === 2 && renderBookInputStep(activeBook, setActiveBook, 'book-outline')}
-          {currentStep === 3 && renderBookInputStep(finishedBook, setFinishedBook, 'checkmark-circle-outline')}
-          {currentStep === 4 && renderBookInputStep(targetBook, setTargetBook, 'bookmark-outline')}
+          {currentStep === 0 && renderTasteStep()}
+          {currentStep === 1 && renderBookInputStep(activeBook, setActiveBook, 'book-outline')}
+          {currentStep === 2 && renderBookInputStep(finishedBook, setFinishedBook, 'checkmark-circle-outline')}
+          {currentStep === 3 && renderBookInputStep(targetBook, setTargetBook, 'bookmark-outline')}
         </ScrollView>
 
         <View style={styles.footer}>
@@ -421,42 +374,6 @@ const styles = StyleSheet.create({
   selectedBookCard: { marginTop: SPACING.m, alignItems: 'center', padding: SPACING.m, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', width: '100%' },
   selectedLabel: { fontFamily: FONTS.primary.bold, fontSize: 12, marginBottom: 4 },
   selectedTitle: { fontFamily: FONTS.primary.semiBold, fontSize: 15, textAlign: 'center' },
-  heroContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    paddingTop: 60 
-  },
-  heroGlowContainer: {
-    position: 'absolute',
-    top: 0,
-    width: width,
-    height: width,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroGlow: {
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: width * 0.4,
-  },
-  brandingContainer: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
-  brandingTitle: {
-    fontFamily: FONTS.serif.bold,
-    fontSize: 48,
-    marginTop: SPACING.m,
-  },
-  heroDescription: {
-    fontFamily: FONTS.primary.regular,
-    fontSize: 18,
-    lineHeight: 28,
-    textAlign: 'center',
-    paddingHorizontal: SPACING.l,
-    opacity: 0.8,
-  }
 });
 
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
