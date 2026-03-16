@@ -22,6 +22,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [statusText, setStatusText] = useState('');
 
   const handleAuth = async () => {
     if (!username || !password || (!isLoginMode && !fullName)) {
@@ -30,44 +31,41 @@ export default function Login() {
     }
 
     setLoading(true);
+    setStatusText("İşlem başlatılıyor...");
     console.log("Starting auth in mode:", isLoginMode ? "Giriş" : "Kayıt");
-    Alert.alert("Debug", `İşlem başlıyor: ${isLoginMode ? "Giriş" : "Kayıt"}`);
     
     try {
       if (isLoginMode) {
-        Alert.alert("Debug", "signIn çağrılıyor...");
+        setStatusText("Giriş yapılıyor...");
         await signIn(username, password);
-        console.log("Sign in successful");
+        setStatusText("Giriş başarılı! Yönlendiriliyorsunuz...");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)/active');
       } else {
-        Alert.alert("Debug", "signUp çağrılıyor...");
-        console.log("Calling signUp...");
+        setStatusText("Kayıt oluşturuluyor...");
         const result = await signUp(username, password, fullName);
-        console.log("Sign up result:", result);
-        Alert.alert("Debug", `SignUp sonucu: ${result ? "Başarılı" : "Başarısız"}`);
+        setStatusText("Kayıt başarılı! Profil oluşturuluyor...");
         
-        // If email confirmation is on, session will be null
         if (result && result.session) {
-          console.log("Sign up successful with session");
+          setStatusText("Hoş geldiniz! Yönlendiriliyorsunuz...");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           router.replace('/(tabs)/active');
         } else {
-          console.log("Sign up successful, but pending confirmation (or session null)");
+          setStatusText("Kayıt tamamlandı. Giriş yapabilirsiniz.");
           Alert.alert(
             "Kayıt Başarılı", 
-            "Hesabınız oluşturuldu. Lütfen giriş yapmayı deneyin.",
+            "Hesabınız oluşturuldu. Lütfen şimdi belirlediğiniz şifre ile giriş yapın.",
             [{ text: "Tamam", onPress: () => setIsLoginMode(true) }]
           );
         }
       }
     } catch (error: any) {
       console.error("CRITICAL Auth error:", error);
-      const errorMsg = error.message || error.error_description || JSON.stringify(error);
-      Alert.alert("Hata", `İşlem başarısız: ${errorMsg}`);
+      const errorMsg = error.message || error.error_description || "Bilinmeyen hata";
+      setStatusText(`HATA: ${errorMsg}`);
+      Alert.alert("Hata", errorMsg);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
-      console.log("Auth attempt finished");
       setLoading(false);
     }
   };
@@ -131,6 +129,14 @@ export default function Login() {
                 <View style={[styles.errorBox, { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: 'rgba(255, 59, 48, 0.3)' }]}>
                   <Ionicons name="alert-circle" size={16} color="#FF3B30" />
                   <Text style={styles.errorText}>Bağlantı Hatası: {connectionError}</Text>
+                </View>
+              )}
+
+              {statusText !== '' && (
+                <View style={[styles.statusBox, { backgroundColor: statusText.startsWith('HATA') ? 'rgba(255, 59, 48, 0.1)' : 'rgba(94, 156, 255, 0.1)' }]}>
+                  <Text style={[styles.statusText, { color: statusText.startsWith('HATA') ? '#FF3B30' : colors.primary }]}>
+                    {statusText}
+                  </Text>
                 </View>
               )}
 
@@ -296,6 +302,16 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary.semiBold,
     fontSize: 13,
     flex: 1,
+  },
+  statusBox: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  statusText: {
+    fontFamily: FONTS.primary.bold,
+    fontSize: 14,
   },
   mainBtn: {
     height: 56,

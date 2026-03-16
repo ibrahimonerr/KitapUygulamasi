@@ -94,8 +94,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Supabase Auth.signUp success, user id:", data.user?.id);
 
     // 2. Create profile entry (Handled via SQL Trigger normally, but manually here for local dev if needed)
-    // SQL trigger is better but we can ensure it here
     if (data.user) {
+      console.log("Creating profile for user:", data.user.id);
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -104,8 +104,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           full_name: fullName,
         });
       
-      if (profileError && profileError.code !== '23505') { // Ignore duplicate key if trigger already ran
-        console.error('Profile creation error:', profileError);
+      if (profileError) {
+        if (profileError.code === '23505') {
+          console.log('Profile already exists, skipping insert.');
+        } else {
+          console.error('Profile creation error:', profileError);
+          // Don't throw here if user was at least created in Auth
+        }
+      } else {
+        console.log("Profile created successfully");
       }
     }
 
