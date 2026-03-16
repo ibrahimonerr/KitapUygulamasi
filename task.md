@@ -9,7 +9,8 @@ Bu belge, `implementation_plan.md` baz alınarak adım adım geliştirme süreci
 - [ ] Çevrimdışı senkronizasyon yetenekli yerel veritabanının (WatermelonDB veya MMKV) ayarlanması.
 - [ ] Supabase bağlantısının konfigüre edilmesi.
 - [x] "Liquid Glass" animasyonlu Splash Screen tasarımının uygulanması.
-- [x] Alt Navigasyon (Bottom Tabs) yapısının kurulması (Active, Library, Clubs, Profile).
+- [x] 11. Onboarding Animation (Hero Intro & Liquid Transitions)
+ yapısının kurulması (Active, Library, Clubs, Profile).
 - [x] "Guest Mode" / Giriş Ekranı (Login/Signup) UI bileşenlerinin oluşturulması.
 - [x] Active Tab: Günlük okuma süresi (Arc Timer) UI'ının hazırlanması.
 - [x] Active Tab: Okuma geçmişi (Quote Stream) için temel kaydırılabilir listenin yapılması.
