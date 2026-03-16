@@ -27,11 +27,14 @@ import { useLibrary } from '../../store/LibraryContext';
 import { TimerSection } from '../../components/active/TimerSection';
 import { ActiveBooksStack } from '../../components/active/ActiveBooksStack';
 import { BilgeRehberCard } from '../../components/active/BilgeRehberCard';
+import { generateBookBriefing } from '../../services/ai';
 import { QuotesFeed } from '../../components/active/QuotesFeed';
 import { GoalModal } from '../../components/active/GoalModal';
 import { BookDetailsModal } from '../../components/active/BookDetailsModal';
 import { ReadingTimerModal } from '../../components/active/ReadingTimerModal';
 import { OptionsBubble } from '../../components/active/OptionsBubble';
+import { QuoteShareEditor } from '../../components/active/QuoteShareEditor';
+import { AIDiscussionPartner } from '../../components/active/AIDiscussionPartner';
 
 const { width, height } = Dimensions.get('window');
 
@@ -61,6 +64,12 @@ export default function ActiveTab() {
   const [isAddingNoteInline, setIsAddingNoteInline] = useState(false);
   const [newContentText, setNewContentText] = useState('');
   const [newContentPage, setNewContentPage] = useState('');
+  const [briefingData, setBriefingData] = useState<any>(null);
+  const [isBriefingLoading, setIsBriefingLoading] = useState(false);
+  const [isShareModalVisible, setIsShareModalVisible] = useState(false);
+  const [shareContent, setShareContent] = useState({ text: '', author: '' });
+  const [isInterviewVisible, setIsInterviewVisible] = useState(false);
+  const [finishedBookForInterview, setFinishedBookForInterview] = useState<any>(null);
   const timerRef = useRef<any>(null);
   const scrollY = useSharedValue(0);
 
@@ -82,6 +91,25 @@ export default function ActiveTab() {
     },
   });
 
+  useEffect(() => {
+    const fetchBriefing = async () => {
+      if (currentBook) {
+        setIsBriefingLoading(true);
+        const data = await generateBookBriefing(
+          currentBook.title, 
+          currentBook.author,
+          currentBook.notes?.map(n => n.text) || [],
+          currentBook.quotes?.map(q => q.text) || []
+        );
+        setBriefingData(data);
+        setIsBriefingLoading(false);
+      } else {
+        setBriefingData(null);
+      }
+    };
+    fetchBriefing();
+  }, [currentBook?.id]);
+
   const toggleBriefing = () => {
     setIsBriefingExpanded(!isBriefingExpanded);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -101,7 +129,7 @@ export default function ActiveTab() {
   const showDetailedAnalysis = () => {
     setIsOptionsModalOpen(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    alert("Detaylı analiz ekranına yönlendiriliyor...");
+    alert("Detaylı analiz ekranına yönlendirlendiriliyor...");
   };
 
   const headerStyle = useAnimatedStyle(() => {
@@ -127,7 +155,7 @@ export default function ActiveTab() {
       right: 0,
       zIndex: 100,
       backgroundColor: colors.background,
-      paddingTop: 60,
+      paddingTop: Platform.OS === 'ios' ? 60 : 40,
       paddingHorizontal: SPACING.xl,
       paddingBottom: SPACING.m,
     };
@@ -283,9 +311,14 @@ export default function ActiveTab() {
   };
 
   const handleFinishBook = (bookId: string) => {
-    finishBook(bookId);
-    setSelectedBook(null);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const book = activeBooks.find(b => b.id === bookId);
+    if (book) {
+      setFinishedBookForInterview(book);
+      setIsInterviewVisible(true);
+      finishBook(bookId);
+      setSelectedBook(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
   };
 
   return (
@@ -318,7 +351,6 @@ export default function ActiveTab() {
             isDark={isDark}
           />
 
-          {/* Aktif Okuma Section */}
           <ActiveBooksStack
             activeBooks={activeBooks}
             onBookPress={handleBookPress}
@@ -329,23 +361,28 @@ export default function ActiveTab() {
         </View>
 
         <View style={styles.feedScroll}>
-          {/* Bilge Rehber Card */}
           <BilgeRehberCard
             isExpanded={isBriefingExpanded}
             onToggle={toggleBriefing}
             onShowOptions={handleBriefingOptions}
             currentBookTitle={currentBookTitle}
             currentBook={currentBook}
+            briefingData={briefingData}
             colors={colors}
             isDark={isDark}
           />
 
-          {/* Quotes Feed */}
-          <QuotesFeed colors={colors} />
+          <QuotesFeed 
+            colors={colors} 
+            onShare={(text, author) => {
+              setShareContent({ text, author });
+              setIsShareModalVisible(true);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+          />
         </View>
       </Animated.ScrollView>
 
-      {/* Goal Setting Modal */}
       <GoalModal
         isVisible={isGoalModalVisible}
         onClose={() => setIsGoalModalVisible(false)}
@@ -356,7 +393,6 @@ export default function ActiveTab() {
         isDark={isDark}
       />
 
-      {/* Reading Timer Modal */}
       <ReadingTimerModal
         isReading={isReading}
         currentBookTitle={currentBookTitle}
@@ -380,7 +416,6 @@ export default function ActiveTab() {
         isDark={isDark}
       />
 
-      {/* Book Details Modal */}
       <BookDetailsModal
         selectedBook={selectedBook}
         onClose={() => setSelectedBook(null)}
@@ -402,7 +437,6 @@ export default function ActiveTab() {
         isDark={isDark}
       />
 
-      {/* Briefing Options Modal */}
       <OptionsBubble
         isVisible={isOptionsModalOpen}
         onClose={() => setIsOptionsModalOpen(false)}
@@ -415,6 +449,25 @@ export default function ActiveTab() {
         isDark={isDark}
       />
 
+      <QuoteShareEditor
+        isVisible={isShareModalVisible}
+        onClose={() => setIsShareModalVisible(false)}
+        quoteText={shareContent.text}
+        author={shareContent.author}
+        colors={colors}
+        isDark={isDark}
+      />
+
+      <AIDiscussionPartner
+        isVisible={isInterviewVisible}
+        onClose={() => setIsInterviewVisible(false)}
+        bookTitle={finishedBookForInterview?.title || ''}
+        author={finishedBookForInterview?.author || ''}
+        userNotes={finishedBookForInterview?.notes?.map((n: any) => n.text) || []}
+        userQuotes={finishedBookForInterview?.quotes?.map((q: any) => q.text) || []}
+        colors={colors}
+        isDark={isDark}
+      />
     </View>
   );
 }

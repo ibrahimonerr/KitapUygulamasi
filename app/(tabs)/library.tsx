@@ -8,6 +8,18 @@ import { Image } from 'expo-image';
 import { COLORS, FONTS, SPACING } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLibrary, Book } from '../../store/LibraryContext';
+import { useTheme } from '../../hooks/useTheme';
+import Animated, { 
+  useAnimatedScrollHandler, 
+  useAnimatedStyle, 
+  useSharedValue, 
+  interpolate, 
+  Extrapolation,
+  withSpring,
+  FadeInDown,
+  FadeIn
+} from 'react-native-reanimated';
+import { ISBNSync } from '../../components/library/ISBNSync';
 
 const { width, height } = Dimensions.get('window');
 
@@ -61,23 +73,12 @@ const StackedShelf = ({ books, onBookPress, colors, isDark }: { books: Book[], o
   );
 };
 
-import Animated, { 
-  useAnimatedScrollHandler, 
-  useAnimatedStyle, 
-  useSharedValue, 
-  interpolate, 
-  Extrapolation,
-  withSpring,
-  FadeInDown,
-  FadeIn
-} from 'react-native-reanimated';
 
-import { useTheme } from '../../hooks/useTheme';
 
 export default function LibraryTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { activeBooks, finishedBooks, waitlistBooks, finishBook, reorderActiveBooks } = useLibrary();
+  const { activeBooks, finishedBooks, waitlistBooks, finishBook, reorderActiveBooks, addBook, addQuoteToBook, addNoteToBook } = useLibrary();
   const scrollY = useSharedValue(0);
   
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -86,8 +87,7 @@ export default function LibraryTab() {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [newContentText, setNewContentText] = useState('');
   const [newContentPage, setNewContentPage] = useState('');
-
-  const { addQuoteToBook, addNoteToBook } = useLibrary();
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -107,7 +107,7 @@ export default function LibraryTab() {
       right: 0,
       zIndex: 100,
       backgroundColor: colors.background,
-      paddingTop: 60,
+      paddingTop: Platform.OS === 'ios' ? 60 : 40,
       paddingHorizontal: SPACING.xl,
       paddingBottom: SPACING.m,
     };
@@ -161,6 +161,12 @@ export default function LibraryTab() {
       <Animated.View style={headerStyle}>
         <View style={styles.headerContentLine}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Kitaplığım</Text>
+          <TouchableOpacity 
+            style={[styles.scanButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+            onPress={() => setIsScannerVisible(true)}
+          >
+            <Ionicons name="barcode-outline" size={24} color={colors.primary} />
+          </TouchableOpacity>
         </View>
       </Animated.View>
 
@@ -389,6 +395,18 @@ export default function LibraryTab() {
               </Animated.View>
           </KeyboardAvoidingView>
       </Modal>
+
+      <ISBNSync
+        isVisible={isScannerVisible}
+        onClose={() => setIsScannerVisible(false)}
+        onBookFound={(bookData) => {
+          addBook(bookData, 'waitlist');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Alert.alert("Kitap Eklendi", `"${bookData.title}" kütüphaneye eklendi.`);
+        }}
+        colors={colors}
+        isDark={isDark}
+      />
     </View>
   );
 }
@@ -406,6 +424,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: FONTS.serif.bold,
     fontSize: 32,
+  },
+  scanButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addButton: {
     width: 44,
@@ -798,9 +823,5 @@ const styles = StyleSheet.create({
   smallSaveButtonText: {
     color: '#FFF',
     fontFamily: FONTS.primary.bold,
-    fontSize: 13,
   },
-  smallCancelButton: {
-    padding: 8,
-  }
 });

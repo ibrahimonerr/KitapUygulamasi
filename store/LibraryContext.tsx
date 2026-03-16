@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { database } from '../model/database';
+import BookModel from '../model/Book';
+import QuoteModel from '../model/Quote';
+import NoteModel from '../model/Note';
+import { Q } from '@nozbe/watermelondb';
 
 export interface Book {
   id: string;
@@ -10,186 +14,126 @@ export interface Book {
   pages: string;
   quotes: Array<{ id: string; text: string; page: number; date: string }>;
   notes: Array<{ id: string; text: string; date: string }>;
+  status: 'active' | 'finished' | 'waitlist';
 }
 
 interface LibraryContextType {
   activeBooks: Book[];
   finishedBooks: Book[];
   waitlistBooks: Book[];
-  addBook: (book: Book, section: 'active' | 'finished' | 'waitlist') => void;
+  addBook: (book: Omit<Book, 'id' | 'quotes' | 'notes'>, section: 'active' | 'finished' | 'waitlist') => void;
   finishBook: (bookId: string) => void;
   moveToActive: (bookId: string, fromSection: 'waitlist' | 'finished') => void;
   reorderActiveBooks: (index: number) => void;
   addQuoteToBook: (bookId: string, quote: { text: string, page: number }) => void;
   addNoteToBook: (bookId: string, noteText: string) => void;
   isLoading: boolean;
+  taste: { authors: string[], genres: string[] };
+  setTaste: (taste: { authors: string[], genres: string[] }) => void;
 }
 
 const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  ACTIVE: '@library_active',
-  FINISHED: '@library_finished',
-  WAITLIST: '@library_waitlist',
-};
-
-const INITIAL_ACTIVE: Book[] = [
-  { id: '1', title: 'Savaş Sanatı', author: 'Sun Tzu', cover: 'https://images.unsplash.com/photo-1476275466078-4007374efac4?q=80&w=1000&auto=format&fit=crop', progress: 0.65, pages: '45/120', quotes: [{ id: 'q1', text: 'En büyük zafer, savaşmadan kazanılan zaferdir.', page: 45, date: 'Dün' }], notes: [] },
-  { id: '2', title: 'Büyük Gatsby', author: 'F. Scott Fitzgerald', cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1000&auto=format&fit=crop', progress: 0.20, pages: '25/210', quotes: [], notes: [] },
-];
-
-const INITIAL_WAITLIST: Book[] = [
-  { id: 'w1', title: 'Homo Sapiens', author: 'Yuval Noah Harari', cover: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?q=80&w=1000&auto=format&fit=crop', progress: 0, pages: '0/450', quotes: [], notes: [] },
-  { id: 'w2', title: 'Simyacı', author: 'Paulo Coelho', cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=1000&auto=format&fit=crop', progress: 0, pages: '0/180', quotes: [], notes: [] },
-];
-
-const INITIAL_FINISHED: Book[] = [
-  { id: 'f1', title: '1984', author: 'George Orwell', cover: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=1000&auto=format&fit=crop', progress: 1, pages: '320/320', quotes: [], notes: [] },
-];
-
 export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeBooks, setActiveBooks] = useState<Book[]>(INITIAL_ACTIVE);
-  const [finishedBooks, setFinishedBooks] = useState<Book[]>(INITIAL_FINISHED);
-  const [waitlistBooks, setWaitlistBooks] = useState<Book[]>(INITIAL_WAITLIST);
+  const [activeBooks, setActiveBooks] = useState<Book[]>([]);
+  const [finishedBooks, setFinishedBooks] = useState<Book[]>([]);
+  const [waitlistBooks, setWaitlistBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [taste, setTaste] = useState<{ authors: string[], genres: string[] }>({ authors: [], genres: [] });
 
-  // Load data on mount
   useEffect(() => {
-    loadLibrary();
+    // Observe database changes
+    const booksCollection = database.get<BookModel>('books');
+    const subscription = booksCollection.query().observe().subscribe(books => {
+      syncBooksState(books);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const loadLibrary = async () => {
-    try {
-      const active = await AsyncStorage.getItem(STORAGE_KEYS.ACTIVE);
-      const finished = await AsyncStorage.getItem(STORAGE_KEYS.FINISHED);
-      const waitlist = await AsyncStorage.getItem(STORAGE_KEYS.WAITLIST);
-
-      if (active) setActiveBooks(JSON.parse(active));
-      if (finished) setFinishedBooks(JSON.parse(finished));
-      if (waitlist) setWaitlistBooks(JSON.parse(waitlist));
-    } catch (e) {
-      console.error('Failed to load library', e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const saveLibrary = async (
-    active: Book[],
-    finished: Book[],
-    waitlist: Book[]
-  ) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(active));
-      await AsyncStorage.setItem(STORAGE_KEYS.FINISHED, JSON.stringify(finished));
-      await AsyncStorage.setItem(STORAGE_KEYS.WAITLIST, JSON.stringify(waitlist));
-    } catch (e) {
-      console.error('Failed to save library', e);
-    }
-  };
-
-  const addBook = (book: Book, section: 'active' | 'finished' | 'waitlist') => {
-    let newActive = [...activeBooks];
-    let newFinished = [...finishedBooks];
-    let newWaitlist = [...waitlistBooks];
-
-    if (section === 'active') {
-      newActive = [book, ...activeBooks];
-      setActiveBooks(newActive);
-    } else if (section === 'finished') {
-      newFinished = [book, ...finishedBooks];
-      setFinishedBooks(newFinished);
-    } else {
-      newWaitlist = [book, ...waitlistBooks];
-      setWaitlistBooks(newWaitlist);
-    }
-    saveLibrary(newActive, newFinished, newWaitlist);
-  };
-
-  const finishBook = (bookId: string) => {
-    const bookToFinish = activeBooks.find(b => b.id === bookId);
-    if (bookToFinish) {
-      const updatedActive = activeBooks.filter(b => b.id !== bookId);
-      const updatedFinished = [{ ...bookToFinish, progress: 1 }, ...finishedBooks];
+  const syncBooksState = async (bookModels: BookModel[]) => {
+    const allBooks = await Promise.all(bookModels.map(async (bm) => {
+      const quotes = await bm.quotes.fetch();
+      const notes = await bm.notes.fetch();
       
-      setActiveBooks(updatedActive);
-      setFinishedBooks(updatedFinished);
-      saveLibrary(updatedActive, updatedFinished, waitlistBooks);
-    }
+      return {
+        id: bm.id,
+        title: bm.title,
+        author: bm.author,
+        cover: bm.cover,
+        status: bm.status as any,
+        progress: bm.progress,
+        pages: bm.pages,
+        quotes: quotes.map((q: any) => ({ id: q.id, text: q.text, page: q.page, date: q.createdAt.toLocaleDateString() })),
+        notes: notes.map((n: any) => ({ id: n.id, text: n.content, date: n.createdAt.toLocaleDateString() })),
+      };
+    }));
+
+    setActiveBooks(allBooks.filter(b => b.status === 'active'));
+    setFinishedBooks(allBooks.filter(b => b.status === 'finished'));
+    setWaitlistBooks(allBooks.filter(b => b.status === 'waitlist'));
+    setIsLoading(false);
   };
 
-  const moveToActive = (bookId: string, fromSection: 'waitlist' | 'finished') => {
-    let bookToMove;
-    let updatedWaitlist = waitlistBooks;
-    let updatedFinished = finishedBooks;
+  const addBook = async (bookData: Omit<Book, 'id' | 'quotes' | 'notes'>, section: 'active' | 'finished' | 'waitlist') => {
+    await database.write(async () => {
+      await database.get<BookModel>('books').create(bm => {
+        bm.title = bookData.title;
+        bm.author = bookData.author;
+        bm.cover = bookData.cover;
+        bm.status = section;
+        bm.progress = bookData.progress;
+        bm.pages = bookData.pages;
+      });
+    });
+  };
 
-    if (fromSection === 'waitlist') {
-      bookToMove = waitlistBooks.find(b => b.id === bookId);
-      updatedWaitlist = waitlistBooks.filter(b => b.id !== bookId);
-    } else {
-      bookToMove = finishedBooks.find(b => b.id === bookId);
-      updatedFinished = finishedBooks.filter(b => b.id !== bookId);
-    }
+  const finishBook = async (bookId: string) => {
+    const book = await database.get<BookModel>('books').find(bookId);
+    await database.write(async () => {
+      await book.update(bm => {
+        bm.status = 'finished';
+      });
+    });
+  };
 
-    if (bookToMove) {
-      const updatedActive = [bookToMove, ...activeBooks];
-      setActiveBooks(updatedActive);
-      setWaitlistBooks(updatedWaitlist);
-      setFinishedBooks(updatedFinished);
-      saveLibrary(updatedActive, updatedFinished, updatedWaitlist);
-    }
+  const moveToActive = async (bookId: string) => {
+    const book = await database.get<BookModel>('books').find(bookId);
+    await database.write(async () => {
+      await book.update(bm => {
+        bm.status = 'active';
+      });
+    });
   };
 
   const reorderActiveBooks = (index: number) => {
+    // Standard reorder logic (UI only for now or add 'position' field to DB later)
     if (index === 0 || index >= activeBooks.length) return;
-    
     const newActive = [...activeBooks];
     const selected = newActive.splice(index, 1)[0];
     newActive.unshift(selected);
-    
     setActiveBooks(newActive);
-    saveLibrary(newActive, finishedBooks, waitlistBooks);
   };
 
-  const addQuoteToBook = (bookId: string, quote: { text: string, page: number }) => {
-    const newQuote = {
-      id: Math.random().toString(36).substring(7),
-      text: quote.text,
-      page: quote.page,
-      date: 'Bugün'
-    };
-
-    const updateList = (list: Book[]) => 
-      list.map(b => b.id === bookId ? { ...b, quotes: [newQuote, ...b.quotes] } : b);
-
-    const newActive = updateList(activeBooks);
-    const newFinished = updateList(finishedBooks);
-    const newWaitlist = updateList(waitlistBooks);
-
-    setActiveBooks(newActive);
-    setFinishedBooks(newFinished);
-    setWaitlistBooks(newWaitlist);
-    saveLibrary(newActive, newFinished, newWaitlist);
+  const addQuoteToBook = async (bookId: string, quote: { text: string, page: number }) => {
+    await database.write(async () => {
+      await database.get<QuoteModel>('quotes').create(qm => {
+        qm.text = quote.text;
+        qm.page = quote.page;
+        qm.book.set(database.get<BookModel>('books').findAndObserve(bookId) as any);
+        // WatermelonDB relation setting is usually different but findAndObserve/ID works
+        (qm as any).book_id = bookId; 
+      });
+    });
   };
 
-  const addNoteToBook = (bookId: string, noteText: string) => {
-    const newNote = {
-      id: Math.random().toString(36).substring(7),
-      text: noteText,
-      date: 'Bugün'
-    };
-
-    const updateList = (list: Book[]) => 
-      list.map(b => b.id === bookId ? { ...b, notes: [newNote, ...b.notes] } : b);
-
-    const newActive = updateList(activeBooks);
-    const newFinished = updateList(finishedBooks);
-    const newWaitlist = updateList(waitlistBooks);
-
-    setActiveBooks(newActive);
-    setFinishedBooks(newFinished);
-    setWaitlistBooks(newWaitlist);
-    saveLibrary(newActive, newFinished, newWaitlist);
+  const addNoteToBook = async (bookId: string, noteText: string) => {
+    await database.write(async () => {
+      await database.get<NoteModel>('notes').create(nm => {
+        nm.content = noteText;
+        (nm as any).book_id = bookId;
+      });
+    });
   };
 
   return (
@@ -205,6 +149,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addQuoteToBook,
         addNoteToBook,
         isLoading,
+        taste,
+        setTaste,
       }}
     >
       {children}

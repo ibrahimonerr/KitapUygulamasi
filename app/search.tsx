@@ -8,7 +8,9 @@ import { Image } from 'expo-image';
 import { FONTS, SPACING } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import * as Haptics from 'expo-haptics';
 import { useLibrary, Book } from '../store/LibraryContext';
+import { searchBooksSemantically } from '../services/semanticSearch';
 
 export default function SearchModal() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function SearchModal() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isAiMode, setIsAiMode] = useState(false);
 
   const debounce = (func: Function, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -37,50 +40,102 @@ export default function SearchModal() {
     
     setLoading(true);
     try {
-      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchTerm)}&maxResults=10&langRestrict=tr`);
-      const data = await response.json();
-      
-      if (data.items) {
-          const parsedResults = data.items.map((item: any) => ({
+      if (isAiMode) {
+        const aiSuggestions = await searchBooksSemantically(searchTerm);
+        const searchPromises = aiSuggestions.map(suggestion => 
+          fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(suggestion)}&maxResults=1`)
+            .then(res => res.json())
+        );
+        
+        const searchResponses = await Promise.all(searchPromises);
+        const combined = searchResponses
+          .filter(data => data.items && data.items.length > 0)
+          .map(data => {
+            const item = data.items[0];
+            return {
               id: item.id,
               title: item.volumeInfo.title,
               author: item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : 'Bilinmeyen Yazar',
               cover: item.volumeInfo.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
               pageCount: item.volumeInfo.pageCount,
               publishYear: item.volumeInfo.publishedDate?.substring(0, 4) || '',
-          }));
-          setResults(parsedResults);
+              isAiSuggested: true
+            };
+          });
+        setResults(combined);
       } else {
-          setResults([]);
+        const [googleRes, olRes] = await Promise.all([
+          fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchTerm)}&maxResults=10`),
+          fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(searchTerm)}&limit=10`)
+        ]);
+
+        let combinedResults: any[] = [];
+
+        if (googleRes.ok) {
+          const googleData = await googleRes.json();
+          if (googleData.items) {
+            const googleMapped = googleData.items.map((item: any) => ({
+              id: item.id,
+              title: item.volumeInfo.title,
+              author: item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : 'Bilinmeyen Yazar',
+              cover: item.volumeInfo.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
+              pageCount: item.volumeInfo.pageCount,
+              publishYear: item.volumeInfo.publishedDate?.substring(0, 4) || '',
+            }));
+            combinedResults = [...googleMapped];
+          }
+        }
+
+        if (olRes.ok) {
+          const olData = await olRes.json();
+          if (olData.docs) {
+            const olMapped = olData.docs.slice(0, 8).map((doc: any) => ({
+              id: doc.key,
+              title: doc.title,
+              author: doc.author_name ? doc.author_name.join(', ') : 'Bilinmeyen Yazar',
+              cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null,
+              pageCount: doc.number_of_pages_median || 200,
+              publishYear: doc.first_publish_year?.toString() || '',
+            }));
+            
+            const existingTitles = new Set(combinedResults.map(r => r.title.toLowerCase()));
+            const uniqueOl = olMapped.filter((r: any) => !existingTitles.has(r.title.toLowerCase()));
+            combinedResults = [...combinedResults, ...uniqueOl];
+          }
+        }
+        setResults(combinedResults);
       }
     } catch (error) {
       console.error("Arama Hatası:", error);
+      setResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const debouncedSearch = useCallback(debounce(searchBooks, 500), []);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      searchBooks(query);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [query]);
 
   const handleAddBook = (book: any) => {
-      const newBook: Book = {
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          cover: book.cover,
-          progress: section === 'active' ? 0.05 : 0,
-          pages: `0/${book.pageCount || 200}`,
-          quotes: [],
-          notes: []
-      };
-      
-      addBook(newBook, section || 'waitlist');
-      router.back();
+    const newBookData = {
+      title: book.title,
+      author: book.author,
+      cover: book.cover,
+      status: section || 'waitlist',
+      progress: section === 'active' ? 0.05 : 0,
+      pages: `0/${book.pageCount || 200}`,
+      rating: section === 'active' ? 5 : 0,
+      summary: '',
+    };
+    
+    addBook(newBookData, section || 'waitlist');
+    router.back();
   };
-
-  useEffect(() => {
-     debouncedSearch(query);
-  }, [query]);
 
   const renderItem = ({ item, index }: { item: any; index: number }) => (
      <Animated.View entering={FadeInUp.delay(index * 50).duration(400)}>
@@ -152,6 +207,20 @@ export default function SearchModal() {
                  </TouchableOpacity>
               )}
           </BlurView>
+          
+          <TouchableOpacity 
+            style={[styles.aiToggle, isAiMode && { backgroundColor: colors.highlight, borderColor: colors.primary }]}
+            onPress={() => {
+              setIsAiMode(!isAiMode);
+              setResults([]);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
+            <Ionicons name="sparkles" size={18} color={isAiMode ? colors.primary : colors.textMuted} />
+            <Text style={[styles.aiToggleText, { color: isAiMode ? colors.primary : colors.textMuted }]}>
+              {isAiMode ? 'Bilge Arama Aktif' : 'Bilge Arama'}
+            </Text>
+          </TouchableOpacity>
       </View>
 
       <View style={{flex: 1}}>
@@ -283,5 +352,21 @@ const styles = StyleSheet.create({
     marginTop: SPACING.m,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  aiToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  aiToggleText: {
+    fontFamily: FONTS.primary.bold,
+    fontSize: 13,
+    marginLeft: 6,
   }
 });

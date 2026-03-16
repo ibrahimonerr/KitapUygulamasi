@@ -5,12 +5,14 @@ import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useTheme } from '../hooks/useTheme';
-
+import { ThemeProvider, useTheme } from '../store/ThemeContext';
 import { LibraryProvider } from '../store/LibraryContext';
 import { ClubsProvider } from '../store/ClubsContext';
+import { UserProvider } from '../store/UserContext';
+import { AuthProvider } from '../store/AuthContext';
+import { SocialProvider } from '../store/SocialContext';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const { colors, isDark } = useTheme();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -28,22 +30,36 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <LibraryProvider>
-        <ClubsProvider>
-          <StatusBar style={isDark ? "light" : "dark"} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="search" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="club/[id]" options={{ presentation: 'card' }} />
-          </Stack>
-        </ClubsProvider>
+        <AuthProvider>
+          <SocialProvider>
+            <UserProvider>
+              <ClubsProvider>
+                <StatusBar style={isDark ? "light" : "dark"} />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.background },
+                  }}
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+                  <Stack.Screen name="club/[id]" options={{ presentation: 'card' }} />
+                </Stack>
+              </ClubsProvider>
+            </UserProvider>
+          </SocialProvider>
+        </AuthProvider>
       </LibraryProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
   );
 }

@@ -1,10 +1,7 @@
-import { useColorScheme } from 'react-native';
-import { DARK_THEME, LIGHT_THEME } from '../constants/theme';
+import { useContext } from 'react';
+import { ThemeContext } from '../store/ThemeContext';
 
-export const useTheme = () => {
-  const colorScheme = useColorScheme();
-  const colors = colorScheme === 'dark' ? DARK_THEME : LIGHT_THEME;
-  const isDark = colorScheme === 'dark';
+// We'll export the existing useTheme from ThemeContext but keep this file as a proxy 
+// to avoid breaking existing imports that use `import { useTheme } from '../hooks/useTheme'`.
 
-  return { colors, isDark, colorScheme };
-};
+export { useTheme } from '../store/ThemeContext';

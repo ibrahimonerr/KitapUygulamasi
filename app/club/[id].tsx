@@ -37,7 +37,8 @@ import { ClubQuotesFeed } from '../../components/clubs/detail/ClubQuotesFeed';
 import { DeadlineCard } from '../../components/clubs/detail/DeadlineCard';
 import { FocusRoomCard } from '../../components/clubs/detail/FocusRoomCard';
 import { FriendsActivityList } from '../../components/clubs/detail/FriendsActivityList';
-import { ActionSheetIOS, Alert } from 'react-native';
+import { ActionSheetIOS, Alert, Modal } from 'react-native';
+import { ClubChat } from '../../components/social/ClubChat';
 
 const { width, height } = Dimensions.get('window');
 const HEADER_HEIGHT = 380;
@@ -47,8 +48,12 @@ export default function ClubDetailScreen() {
   const { id } = useLocalSearchParams();
   const { colors, isDark } = useTheme();
   const router = useRouter();
-  const { myClubs, deleteClub, leaveClub } = useClubs();
+  const { myClubs, deleteClub, leaveClub, joinClub, isUserMember } = useClubs();
   const scrollY = useSharedValue(0);
+  const [isChatVisible, setIsChatVisible] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
+  const isMember = isUserMember(id as string);
 
   // Find club in context
   const club = myClubs.find(c => c.id === id);
@@ -93,6 +98,18 @@ export default function ClubDetailScreen() {
           { text: isAdmin ? 'Sil' : 'Ayrıl', style: 'destructive', onPress: confirmAction }
         ]
       );
+    }
+  };
+
+  const handleJoin = async () => {
+    setIsJoining(true);
+    try {
+      await joinClub(id as string);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      Alert.alert("Hata", "Kulübe katılırken bir sorun oluştu.");
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -157,14 +174,16 @@ export default function ClubDetailScreen() {
           </BlurView>
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handleSettings}
-        >
-          <BlurView intensity={30} tint="light" style={styles.blurBtn}>
-            <Ionicons name="settings-outline" size={22} color="#FFF" />
-          </BlurView>
-        </TouchableOpacity>
+        {isMember && (
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleSettings}
+          >
+            <BlurView intensity={30} tint="light" style={styles.blurBtn}>
+              <Ionicons name="settings-outline" size={22} color="#FFF" />
+            </BlurView>
+          </TouchableOpacity>
+        )}
       </Animated.View>
 
       <Animated.ScrollView
@@ -199,41 +218,106 @@ export default function ClubDetailScreen() {
         </View>
 
         <View style={styles.mainContainer}>
-          {club.type === 'book' ? (
-            <>
-              {/* 1. Collective Progress */}
-              <CollectiveProgress colors={colors} isDark={isDark} />
+          {isMember ? (
+            club.type === 'book' ? (
+              <>
+                {/* 1. Collective Progress */}
+                <CollectiveProgress colors={colors} isDark={isDark} />
 
-              {/* 2. Deadline & Next Goal */}
-              <DeadlineCard 
-                deadline={club.deadline || 'Süre Yok'} 
-                targetPage={club.targetPage || 0}
-                colors={colors} 
-              />
+                {/* 2. Deadline & Next Goal */}
+                <DeadlineCard 
+                  deadline={club.deadline || 'Süre Yok'} 
+                  targetPage={club.targetPage || 0}
+                  colors={colors} 
+                />
 
-              {/* 3. Wise Mentor Discussion Prompts */}
-              <WiseMentorPrompts colors={colors} isDark={isDark} />
+                {/* 3. Wise Mentor Discussion Prompts */}
+                <WiseMentorPrompts colors={colors} isDark={isDark} />
 
-              {/* 4. Focus Room Preview */}
-              <FocusRoomCard colors={colors} isDark={isDark} />
+                {/* 4. Focus Room Preview */}
+                <FocusRoomCard colors={colors} isDark={isDark} />
 
-              {/* 5. Club Specific Feed */}
-              <ClubQuotesFeed colors={colors} isDark={isDark} />
-            </>
+                {/* 5. Club Specific Feed */}
+                <ClubQuotesFeed colors={colors} isDark={isDark} />
+              </>
+            ) : (
+              <>
+                {/* Friends Club Specific Layout */}
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Arkadaşlar Ne Okuyor?</Text>
+                <FriendsActivityList colors={colors} isDark={isDark} />
+                
+                <FocusRoomCard colors={colors} isDark={isDark} />
+                
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Son Paylaşımlar</Text>
+                <ClubQuotesFeed colors={colors} isDark={isDark} />
+              </>
+            )
+          ) : club.privacy === 'public' ? (
+            <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.joinOverlay}>
+              <Ionicons name="lock-closed" size={48} color={colors.primary} style={{ marginBottom: 20 }} />
+              <Text style={[styles.joinTitle, { color: colors.text }]}>Genel Okuma Grubu</Text>
+              <Text style={[styles.joinSubtitle, { color: colors.textMuted }]}>
+                Bu genel bir gruptur. Tartışmalara katılmak için üye olmalısın.
+              </Text>
+              <TouchableOpacity 
+                style={[styles.joinBtn, { backgroundColor: colors.primary }]}
+                onPress={handleJoin}
+                disabled={isJoining}
+              >
+                <Text style={styles.joinBtnText}>{isJoining ? 'Katılınıyor...' : 'Gruba Katıl'}</Text>
+              </TouchableOpacity>
+            </BlurView>
           ) : (
-            <>
-              {/* Friends Club Specific Layout */}
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Arkadaşlar Ne Okuyor?</Text>
-              <FriendsActivityList colors={colors} isDark={isDark} />
-              
-              <FocusRoomCard colors={colors} isDark={isDark} />
-              
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Son Paylaşımlar</Text>
-              <ClubQuotesFeed colors={colors} isDark={isDark} />
-            </>
+            <View style={styles.privateOverlay}>
+              <Ionicons name="eye-off" size={60} color={colors.textMuted} style={{ marginBottom: 20, opacity: 0.5 }} />
+              <Text style={[styles.joinTitle, { color: colors.text }]}>Bu Kulüp Gizlidir</Text>
+              <Text style={[styles.joinSubtitle, { color: colors.textMuted }]}>
+                Sadece davetli üyeler bu kulübün içeriğini görebilir ve mesajlaşabilir.
+              </Text>
+              <TouchableOpacity 
+                style={[styles.backBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                onPress={() => router.back()}
+              >
+                <Text style={[styles.backBtnText, { color: colors.text }]}>Geri Dön</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </Animated.ScrollView>
+
+      {/* Floating Chat Button (Only for members) */}
+      {isMember && (
+        <Animated.View 
+          entering={FadeIn.delay(1000)}
+          style={styles.floatingChatBtnContainer}
+        >
+          <TouchableOpacity 
+            style={[styles.floatingChatBtn, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              setIsChatVisible(true);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+          >
+            <Ionicons name="chatbubbles" size={24} color="#FFF" />
+            <View style={styles.unreadBadge} />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* Chat Modal */}
+      <Modal
+        visible={isChatVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsChatVisible(false)}
+      >
+        <ClubChat 
+          clubId={id as string}
+          colors={colors}
+          isDark={isDark}
+          onClose={() => setIsChatVisible(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -342,4 +426,78 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: SPACING.m,
   },
+  floatingChatBtnContainer: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    zIndex: 1000,
+  },
+  floatingChatBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF3B30',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  joinOverlay: {
+    marginTop: 20,
+    padding: 30,
+    borderRadius: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  joinTitle: {
+    fontFamily: FONTS.serif.bold,
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  joinSubtitle: {
+    fontFamily: FONTS.primary.regular,
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  joinBtn: {
+    paddingHorizontal: 40,
+    paddingVertical: 16,
+    borderRadius: 28,
+  },
+  joinBtnText: {
+    color: '#FFF',
+    fontFamily: FONTS.primary.bold,
+    fontSize: 16,
+  },
+  privateOverlay: {
+    marginTop: 40,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  backBtn: {
+    marginTop: 10,
+    paddingHorizontal: 40,
+    paddingVertical: 14,
+    borderRadius: 25,
+  },
+  backBtnText: {
+    fontFamily: FONTS.primary.semiBold,
+    fontSize: 16,
+  }
 });

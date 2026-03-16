@@ -39,7 +39,7 @@ export const CreateClubModal: React.FC<CreateClubModalProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedType, setSelectedType] = useState<'book' | 'friends'>('book');
-  const [selectedPrivacy, setSelectedPrivacy] = useState<'public' | 'private'>('public');
+  const [selectedPrivacy, setSelectedPrivacy] = useState<'public' | 'private'>('private');
 
   const handleCreate = () => {
     if (name.trim()) {
@@ -141,34 +141,19 @@ export const CreateClubModal: React.FC<CreateClubModalProps> = ({
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.textMuted }]}>GİZLİLİK</Text>
                 <View style={styles.privacyRow}>
-                  <TouchableOpacity 
+                  <View 
                     style={[
                       styles.privacyOption, 
-                      { backgroundColor: selectedPrivacy === 'public' ? colors.primary : colors.surfaceLight }
+                      { backgroundColor: colors.primary }
                     ]}
-                    onPress={() => {
-                      setSelectedPrivacy('public');
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
                   >
-                    <Ionicons name="earth" size={18} color={selectedPrivacy === 'public' ? '#FFF' : colors.textMuted} />
-                    <Text style={[styles.privacyText, { color: selectedPrivacy === 'public' ? '#FFF' : colors.text }]}>Herkese Açık</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={[
-                      styles.privacyOption, 
-                      { backgroundColor: selectedPrivacy === 'private' ? colors.primary : colors.surfaceLight }
-                    ]}
-                    onPress={() => {
-                      setSelectedPrivacy('private');
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                  >
-                    <Ionicons name="lock-closed" size={18} color={selectedPrivacy === 'private' ? '#FFF' : colors.textMuted} />
-                    <Text style={[styles.privacyText, { color: selectedPrivacy === 'private' ? '#FFF' : colors.text }]}>Özel (Sadece Davet)</Text>
-                  </TouchableOpacity>
+                    <Ionicons name="lock-closed" size={18} color={'#FFF'} />
+                    <Text style={[styles.privacyText, { color: '#FFF' }]}>Sadece Davetli Üyeler</Text>
+                  </View>
                 </View>
+                <Text style={[styles.privacyInfo, { color: colors.textMuted }]}>
+                  Kulübünüz tamamen gizlidir ve sadece sizin eklediğiniz kişiler tarafından görülebilir.
+                </Text>
               </View>
 
               <TouchableOpacity 
@@ -284,6 +269,13 @@ const styles = StyleSheet.create({
   privacyText: {
     fontFamily: FONTS.primary.semiBold,
     fontSize: 14,
+  },
+  privacyInfo: {
+    fontFamily: FONTS.primary.regular,
+    fontSize: 12,
+    marginTop: 10,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   createBtn: {
     marginTop: SPACING.l,

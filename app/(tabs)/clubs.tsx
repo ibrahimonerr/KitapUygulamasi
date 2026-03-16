@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { 
+  FadeIn, 
+  FadeInDown, 
+  useAnimatedScrollHandler, 
+  useAnimatedStyle, 
+  useSharedValue, 
+  interpolate, 
+  Extrapolation 
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SPACING } from '../../constants/theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -25,6 +33,32 @@ export default function ClubsTab() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<any>(null);
+
+  const scrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const headerStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(scrollY.value, [0, 80], [0, -100], Extrapolation.CLAMP);
+    const opacity = interpolate(scrollY.value, [0, 50], [1, 0], Extrapolation.CLAMP);
+    return {
+      transform: [{ translateY }],
+      opacity,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 100,
+      backgroundColor: colors.background,
+      paddingTop: Platform.OS === 'ios' ? 60 : 40,
+      paddingHorizontal: SPACING.xl,
+      paddingBottom: SPACING.m,
+    };
+  });
 
   const handleCreateClub = (data: any) => {
     createClub(data);
@@ -49,7 +83,7 @@ export default function ClubsTab() {
         style={StyleSheet.absoluteFill} 
       />
       
-      <View style={styles.header}>
+      <Animated.View style={headerStyle}>
         <View style={styles.headerTop}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Kulüpler</Text>
           <TouchableOpacity 
@@ -62,9 +96,11 @@ export default function ClubsTab() {
             <Ionicons name="add" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
-      <ScrollView 
+      <Animated.ScrollView 
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -95,7 +131,7 @@ export default function ClubsTab() {
             </TouchableOpacity>
           </Animated.View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Modals */}
       <CreateClubModal 
@@ -121,16 +157,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 60,
-    backgroundColor: 'transparent',
-    paddingHorizontal: SPACING.xl,
-  },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.l,
   },
   headerTitle: {
     fontFamily: FONTS.serif.bold,
@@ -150,7 +180,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.l,
+    paddingTop: 130,
     paddingBottom: 120,
   },
   emptyState: {
@@ -185,3 +215,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
   }
 });
+

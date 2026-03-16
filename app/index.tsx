@@ -63,26 +63,34 @@ export default function Index() {
       ]} />
 
       <View style={styles.content}>
-        <Animated.View entering={FadeInDown.duration(1000).springify()} style={styles.logoContainer}>
-          <BlurView intensity={20} tint={isDark ? "light" : "dark"} style={[styles.logoBlur, { borderColor: colors.border }]}>
-             <Text style={[styles.title, { color: colors.text }]}>Bilge<Text style={{color: colors.primary}}>Okur</Text></Text>
-          </BlurView>
+        <Animated.View 
+          entering={FadeIn.duration(1200)}
+          style={styles.logoContainer}
+        >
+          <Animated.View
+            entering={FadeInDown.delay(300).duration(1000).springify()}
+            style={[styles.logoBlurWrapper, { borderColor: colors.border }]}
+          >
+            <BlurView intensity={25} tint={isDark ? "light" : "dark"} style={styles.logoBlur}>
+               <Text style={[styles.title, { color: colors.text }]}>Bilge<Text style={{color: colors.primary}}>Okur</Text></Text>
+            </BlurView>
+          </Animated.View>
         </Animated.View>
 
-        <Animated.View entering={FadeIn.delay(600).duration(1000)} style={styles.taglineContainer}>
+        <Animated.View entering={FadeIn.delay(800).duration(1000)} style={styles.taglineContainer}>
           <Text style={[styles.tagline, { color: colors.textMuted }]}>
             Kitaplar sadece okunmaz,{'\n'}yaşanır.
           </Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInUp.delay(1000).duration(800).springify()} style={styles.buttonWrapper}>
+        <Animated.View entering={FadeInUp.delay(1200).duration(1000).springify()} style={styles.buttonWrapper}>
           <TouchableOpacity 
              activeOpacity={0.8}
              onPress={() => router.push('/(auth)/login')}
              style={styles.button}
           >
              <LinearGradient
-               colors={isDark ? ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)'] : ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.02)']}
+               colors={isDark ? ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.02)'] : ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.02)']}
                style={[styles.buttonGradient, { borderColor: colors.border }]}
              >
                <BlurView intensity={30} tint={isDark ? "light" : "dark"} style={styles.buttonBlur}>
@@ -127,13 +135,15 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginBottom: SPACING.xxl,
+  },
+  logoBlurWrapper: {
     borderRadius: 30,
     overflow: 'hidden',
+    borderWidth: 1,
   },
   logoBlur: {
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
-    borderWidth: 1,
   },
   title: {
     fontFamily: FONTS.serif.bold,

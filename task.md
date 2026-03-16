@@ -19,7 +19,7 @@ Bu belge, `implementation_plan.md` baz alınarak adım adım geliştirme süreci
 - [x] Library Tab: Kitapların "Stacked" (Yığın) dizilimiyle sergilendiği temel UI'ın oluşturulması.
 - [x] Google Books API / Open Library API ile Evrensel Arama (Global Search) entegrasyonu.
 - [ ] Spotify benzeri "Zevk Küratörlüğü" (Onboarding) ekranlarının tasarlanması ve mantığının kurulması.
-- [ ] Gemini 3.0+ API entegrasyonu: "Wise Mentor" brifing modülünün kurulması.
+- [ ] Gemini 2.5+ API entegrasyonu: "Wise Mentor" brifing modülünün kurulması.
 - [ ] "İlk Aktif Kitap" seçimi ve sayfa/hedef belirleme akışının uygulanması.
 - [ ] OCR modülünün yapılandırılması (Kamera ile alıntı tarama).
 - [ ] Supabase pgvector kurulumu ve Semantik Alıntı Arama (Semantic Quote Search) altyapısının yazılması.

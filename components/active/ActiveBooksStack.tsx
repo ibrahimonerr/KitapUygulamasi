@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
+import Animated, { FadeInRight, Layout } from 'react-native-reanimated';
 import { FONTS, SPACING } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -27,7 +28,9 @@ export const ActiveBooksStack: React.FC<ActiveBooksStackProps> = ({
       <View style={styles.activeSectionHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Ionicons name="library" size={20} color={colors.primary} />
-          <Text style={[styles.activeSectionTitle, { color: colors.text }]}>Aktif Okunan Kitaplar</Text>
+          <Animated.Text entering={FadeInRight.delay(200)} style={[styles.activeSectionTitle, { color: colors.text }]}>
+            Aktif Okunan Kitaplar
+          </Animated.Text>
         </View>
         <TouchableOpacity style={styles.sectionAddButton} onPress={() => onAddBook('active')}>
           <Ionicons name="add-circle" size={26} color={colors.primary} />
@@ -42,9 +45,10 @@ export const ActiveBooksStack: React.FC<ActiveBooksStackProps> = ({
           const opacity = 1 - (index * 0.18);
           
           return (
-            <TouchableOpacity 
+            <Animated.View 
               key={book.id}
-              activeOpacity={1}
+              entering={FadeInRight.delay(400 + index * 100)}
+              layout={Layout.springify()}
               style={[
                 styles.bookCardWrapper,
                 { 
@@ -55,33 +59,44 @@ export const ActiveBooksStack: React.FC<ActiveBooksStackProps> = ({
                   borderWidth: 1.5,
                 }
               ]}
-              onPress={() => onBookPress(index)}
             >
-              <BlurView intensity={20} tint={isDark ? "light" : "dark"} style={styles.bookCardBlur}>
-                <View style={styles.bookCardContent}>
-                  <Image source={{ uri: book.cover }} style={styles.bookCardCover} />
-                  <View style={styles.bookCardInfo}>
-                    <Text style={[styles.bookCardTitle, { color: colors.text }]} numberOfLines={1}>{book.title}</Text>
-                    <Text style={[styles.bookCardAuthor, { color: colors.textMuted }]}>{book.author}</Text>
-                    
-                    <View style={styles.progressContainer}>
-                      <View style={[styles.progressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                        <View style={[styles.progressBarFill, { width: `${book.progress * 100}%`, backgroundColor: colors.primary }]} />
+              <TouchableOpacity 
+                activeOpacity={0.9}
+                style={{ flex: 1 }}
+                onPress={() => onBookPress(index)}
+              >
+                <BlurView intensity={20} tint={isDark ? "light" : "dark"} style={styles.bookCardBlur}>
+                  <View style={styles.bookCardContent}>
+                    <Image source={{ uri: book.cover }} style={styles.bookCardCover} />
+                    <View style={styles.bookCardInfo}>
+                      <Text style={[styles.bookCardTitle, { color: colors.text }]} numberOfLines={1}>{book.title}</Text>
+                      <Text style={[styles.bookCardAuthor, { color: colors.textMuted }]}>{book.author}</Text>
+                      
+                      <View style={styles.progressContainer}>
+                        <View style={[styles.progressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                          <View style={[styles.progressBarFill, { width: `${book.progress * 100}%`, backgroundColor: colors.primary }]} />
+                        </View>
+                        <View style={styles.progressBadgeRow}>
+                          <Text style={[styles.progressText, { color: colors.textMuted }]}>
+                            %{Math.round(book.progress * 100)} Tamamlandı
+                          </Text>
+                          <Ionicons name="bookmark" size={12} color={colors.primary} />
+                        </View>
                       </View>
-                      <Text style={[styles.progressText, { color: colors.textMuted }]}>%{Math.round(book.progress * 100)} • {book.pages}</Text>
                     </View>
+                    {index === 0 && (
+                      <Ionicons name="chevron-forward-circle" size={24} color={colors.primary} style={{ opacity: 0.8 }} />
+                    )}
                   </View>
-                  {index === 0 && (
-                    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-                  )}
-                </View>
-              </BlurView>
-            </TouchableOpacity>
+                </BlurView>
+              </TouchableOpacity>
+            </Animated.View>
           );
         })}
 
         {activeBooks.length < 2 && (
-          <TouchableOpacity 
+          <Animated.View 
+            entering={FadeInRight.delay(600)}
             style={[
                 styles.addBookSlot, 
                 { 
@@ -90,11 +105,15 @@ export const ActiveBooksStack: React.FC<ActiveBooksStackProps> = ({
                     borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
                 }
             ]}
-            onPress={() => onAddBook('active')}
           >
-                <Ionicons name="add" size={32} color={colors.textMuted} />
-                <Text style={[styles.addBookText, { color: colors.textMuted }]}>Kitap Ekle</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
+              onPress={() => onAddBook('active')}
+            >
+              <Ionicons name="add" size={32} color={colors.textMuted} />
+              <Text style={[styles.addBookText, { color: colors.textMuted }]}>Kitap Ekle</Text>
+            </TouchableOpacity>
+          </Animated.View>
         )}
       </View>
     </View>
@@ -179,6 +198,11 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     borderRadius: 2,
+  },
+  progressBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   progressText: {
     fontFamily: FONTS.primary.semiBold,

@@ -1,12 +1,76 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS, SPACING } from '../../constants/theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Animated, { 
+  FadeIn, 
+  FadeInDown, 
+  useAnimatedScrollHandler, 
+  useAnimatedStyle, 
+  useSharedValue, 
+  interpolate, 
+  Extrapolation 
+} from 'react-native-reanimated';
+
+// Yeni Bileşenler
+import IntellectualIdentity from '../../components/profile/IntellectualIdentity';
+import WeeklyHeatmap from '../../components/profile/WeeklyHeatmap';
+import MentorReport from '../../components/profile/MentorReport';
+import Achievements from '../../components/profile/Achievements';
+import IdeaGraphButton from '../../components/ui/IdeaGraphButton';
+import EditProfileModal from '../../components/profile/EditProfileModal';
+import SettingsModal from '../../components/profile/SettingsModal';
+import NotificationsModal from '../../components/profile/NotificationsModal';
+import { useUser } from '../../store/UserContext';
+
+const { width } = Dimensions.get('window');
 
 export default function ProfileTab() {
   const { colors, isDark } = useTheme();
+  const { profile } = useUser();
+  const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
+  const [isSettingsModalVisible, setIsSettingsModalVisible] = React.useState(false);
+  const [isNotifModalVisible, setIsNotifModalVisible] = React.useState(false);
+  
+  const scrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const headerStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      scrollY.value,
+      [0, 80],
+      [0, -100],
+      Extrapolation.CLAMP
+    );
+    const opacity = interpolate(
+      scrollY.value,
+      [0, 50],
+      [1, 0],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      transform: [{ translateY }],
+      opacity,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+       zIndex: 100,
+      backgroundColor: colors.background,
+      paddingTop: Platform.OS === 'ios' ? 60 : 40,
+      paddingHorizontal: SPACING.xl,
+      paddingBottom: SPACING.m,
+    };
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -15,113 +79,242 @@ export default function ProfileTab() {
         style={StyleSheet.absoluteFill} 
       />
       
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Profil</Text>
-        <TouchableOpacity style={[styles.settingsButton, { backgroundColor: colors.surfaceLight }]}>
-          <Ionicons name="settings-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.profileHeader}>
-          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surfaceMedium }]}>
-            <Ionicons name="person" size={40} color={colors.textMuted} />
+      <Animated.View style={headerStyle}>
+        <View style={styles.headerContent}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Profil</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              onPress={() => {
+                setIsNotifModalVisible(true);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }}
+              style={[styles.actionButton, { backgroundColor: colors.surfaceLight }]}
+            >
+              <Ionicons name="notifications-outline" size={24} color={colors.text} />
+              <View style={[styles.notificationDot, { backgroundColor: colors.primary }]} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => setIsSettingsModalVisible(true)}
+              style={[styles.actionButton, { backgroundColor: colors.surfaceLight, marginLeft: SPACING.s }]}
+            >
+              <Ionicons name="settings-outline" size={24} color={colors.text} />
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.userName, { color: colors.text }]}>İbrahim Öner</Text>
-          <Text style={[styles.userBio, { color: colors.textMuted }]}>Kitap aşığı ve mentor.</Text>
         </View>
+      </Animated.View>
+
+      <Animated.ScrollView 
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 130 }]}
+      >
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.profileHeader}>
+          <View style={[styles.avatarContainer, { borderColor: colors.primary }]}>
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surfaceMedium }]}>
+              {profile.avatar ? (
+                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={50} color={colors.textMuted} />
+              )}
+            </View>
+            <View style={styles.premiumBadge}>
+              <Ionicons name="sparkles" size={12} color="#FFF" />
+            </View>
+          </View>
+          <Text style={[styles.userName, { color: colors.text }]}>{profile.name}</Text>
+          <Text style={[styles.userBio, { color: colors.textMuted }]}>{profile.bio}</Text>
+          
+          <TouchableOpacity 
+            onPress={() => setIsEditModalVisible(true)}
+            style={[styles.editProfileButton, { backgroundColor: colors.surfaceLight }]}
+          >
+            <Text style={[styles.editProfileText, { color: colors.text }]}>Profili Düzenle</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: colors.surfaceLight, borderColor: colors.surfaceGlass }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>12</Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Bitirilen</Text>
+          <View style={[styles.statItem]}>
+            <Text style={[styles.statValue, { color: colors.text }]}>12</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Kitap</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surfaceLight, borderColor: colors.surfaceGlass }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>450</Text>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={[styles.statItem]}>
+            <Text style={[styles.statValue, { color: colors.text }]}>450</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Not</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surfaceLight, borderColor: colors.surfaceGlass }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>128</Text>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={[styles.statItem]}>
+            <Text style={[styles.statValue, { color: colors.text }]}>128</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Alıntı</Text>
           </View>
         </View>
-      </ScrollView>
+
+        {/* Entelektüel Kimlik */}
+        <IntellectualIdentity />
+
+        {/* Haftalık Isı Haritası */}
+        <WeeklyHeatmap />
+
+        {/* AI Mentor Raporu (Analiz & Öneri) */}
+        <MentorReport />
+
+        {/* Başarı Kupası */}
+        <Achievements />
+
+        {/* Idea Graph - Fikirlerin Bağlantı Haritası */}
+        <IdeaGraphButton />
+
+        <View style={{ height: 100 }} />
+      </Animated.ScrollView>
+
+      <EditProfileModal 
+        isVisible={isEditModalVisible} 
+        onClose={() => setIsEditModalVisible(false)} 
+      />
+
+      <SettingsModal 
+        isVisible={isSettingsModalVisible} 
+        onClose={() => setIsSettingsModalVisible(false)}
+      />
+
+      <NotificationsModal 
+        isVisible={isNotifModalVisible} 
+        onClose={() => setIsNotifModalVisible(false)}
+      />
     </View>
   );
 }
-
-import { TouchableOpacity } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.m,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   headerTitle: {
     fontFamily: FONTS.serif.bold,
     fontSize: 32,
   },
-  settingsButton: {
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  notificationDot: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
   scrollContent: {
     paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: 120,
   },
   profileHeader: {
     alignItems: 'center',
-    marginVertical: SPACING.xl,
+    marginBottom: SPACING.l,
+  },
+  avatarContainer: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 2,
+    padding: 3,
+    marginBottom: SPACING.m,
+    position: 'relative',
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
+    flex: 1,
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.m,
+  },
+  premiumBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#FFD700',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  emptyText: {
+    fontFamily: FONTS.primary.semiBold,
+    fontSize: 16,
+    marginTop: SPACING.m,
   },
   userName: {
     fontFamily: FONTS.primary.bold,
-    fontSize: 22,
+    fontSize: 24,
     marginBottom: 4,
   },
   userBio: {
     fontFamily: FONTS.primary.regular,
     fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.m,
+  },
+  editProfileButton: {
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.s,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  editProfileText: {
+    fontFamily: FONTS.primary.semiBold,
+    fontSize: 13,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: SPACING.l,
-  },
-  statCard: {
-    flex: 1,
-    marginHorizontal: 4,
-    paddingVertical: SPACING.l,
-    borderRadius: 16,
-    borderWidth: 1,
+    justifyContent: 'space-around',
     alignItems: 'center',
+    marginVertical: SPACING.l,
+    paddingVertical: SPACING.m,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
   },
   statValue: {
     fontFamily: FONTS.serif.bold,
-    fontSize: 24,
-    marginBottom: 4,
+    fontSize: 20,
+    marginBottom: 2,
   },
   statLabel: {
-    fontFamily: FONTS.primary.semiBold,
+    fontFamily: FONTS.primary.regular,
     fontSize: 12,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
+
+

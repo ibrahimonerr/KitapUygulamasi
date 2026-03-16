@@ -41,4 +41,12 @@ Bu oturumda, uygulamanın ana ekranı olan "Active" sekmesi statik bir tasarımd
 - **Zamanlayıcı Geliştirmeleri:** Odak modundayken "Mola Ver" veya "Brifing Oku" gibi derinleşme özellikleri eklenebilir.
 
 ---
-**Durum:** Phase 1 (Active Tab) başarıyla tamamlandı ve interaktif hale getirildi.
+**Durum:** Phase 2 (Profile & Insights) başarıyla tamamlandı. Profil sayfası entelektüel bir kimlik merkezine dönüştürüldü.
+
+## 🏆 Profil Sayfası Güncellemesi (15 Mart 2026)
+- **Entelektüel Kimlik:** Kullanıcının okuma alışkanlıklarına göre AI tarafından atanan "Edebi Kaşif" gibi unvanlar ve detaylı açıklamalar eklendi.
+- **Haftalık Isı Haritası:** Okuma sıklığını görselleştiren minimalist bir aktivite grafiği uygulandı.
+- **AI Mentor Raporu:** Haftalık derinlemesine analizler ve "Ruhun İçin Önerilen" kitap tavsiyeleri bölümü oluşturuldu.
+- **Başarı Kupası:** Gece Kuşu, 7 Gün Seri gibi motivasyonel badge'ler ve başarı takip sistemi eklendi.
+- **Idea Graph (Bağlantı Haritası):** Kullanıcının notları ve alıntıları arasındaki anlamsal ilişkileri gösteren, hareketli ve cam efektli (Liquid Glass) interaktif bir zihin haritası tasarlandı.
+

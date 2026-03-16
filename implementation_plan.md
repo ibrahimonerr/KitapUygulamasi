@@ -17,7 +17,7 @@
 6.  **Veritabanı & Backend:**
     *   **Local-First:** `@nozbe/watermelondb` (Çevrimdışı öncelikli, yüksek performanslı yerel veritabanı).
     *   **Remote/Auth:** `@supabase/supabase-js` (Kullanıcı doğrulaması, bulut senkronizasyonu ve pgvector ile semantik arama için).
-7.  **Yapay Zeka:** `@google/generative-ai` (Gemini 3.0+ API erişimi için).
+7.  **Yapay Zeka:** `@google/generative-ai` (Gemini 2.5+ API erişimi için).
 8.  **Donanım Erişimleri:** `expo-camera`, `expo-image-picker`.
 9.  **İkonlar & Fontlar:** `@expo/vector-icons`, `@expo-google-fonts/inter` (modern görünüm) ve `@expo-google-fonts/lora` (edebi/serif görünüm).
 
@@ -55,7 +55,7 @@ Expo Router kullanılarak aşağıdaki sayfa yapısı oluşturulacaktır:
 *Bu kısım Phase 1 tamamlandıktan sonra detaylandırılacaktır.*
 *   WatermelonDB şemasının oluşturulması (`model/schema.ts`).
 *   Supabase istemcisinin ayarlanması (`lib/supabase.ts`).
-*   Gemini API entegrasyonu (`services/ai.ts`).
+*   [ ] Gemini 2.5+ API entegrasyonu: "Wise Mentor" brifing modülünün kurulması.
 
 ## Verification Plan (Doğrulama Planı)
 
@@ -67,10 +67,31 @@ Expo Router kullanılarak aşağıdaki sayfa yapısı oluşturulacaktır:
 1.  Kullanıcının makinesinde `npx expo start` veya `npm run web` çalıştırılacaktır.
 2.  Expo Go (veya iOS/Android simülatörü) üzerinden uygulamanın açıldığı doğrulanacaktır.
 3.  "Liquid Glass" konseptli Splash Screen'in çalıştığı görülecektir.
-4.  Bottom Tab yönlendirmelerinin (Active, Library, Clubs, Profile) sayfalar arası geçişi sağladığı test edilecektir.
+4.  Bottom Tab## Phase 4: Görsel Cila & Stil Editörü
+Uygulamanın "Premium" hissini pekiştirecek görsel dokunuşlar ve kullanıcıların içeriklerini paylaşmasını sağlayacak modüller.
+
+### Değişiklikler:
+
+#### [NEW] [QuoteShareEditor.tsx](file:///Users/ibrahimoner/Desktop/Kitap-Okuma-Uygulamasi/components/active/QuoteShareEditor.tsx)
+- [ ] Alıntıları farklı arka plan (Glassmorphism, Gradient, Solid) ve yazı tipi seçenekleriyle görselleştiren modül.
+- [ ] Görüntü olarak kaydetme (Save as Image) yeteneği.
+
+#### [MODIFY] [ActiveBooksStack.tsx](file:///Users/ibrahimoner/Desktop/Kitap-Okuma-Uygulamasi/components/active/ActiveBooksStack.tsx)
+- [ ] Kitap kapağına tıklandığında kapağın büyümesi ve detaylara yumuşak bir geçişle (Shared Element Transition benzeri) açılması.
+
+#### [NEW] [ISBNSync.tsx](file:///Users/ibrahimoner/Desktop/Kitap-Okuma-Uygulamasi/components/library/ISBNSync.tsx)
+- [ ] `expo-camera` kullanarak barkod tarama.
+- [ ] Google Books API entegrasyonu ile kitap bilgilerini otomatik çekme.
+
+## Phase 5: Sosyal & İleri Seviye Özellikler
+- [ ] **Butik Kulüpler v2:** Eş zamanlı okuma etkinlikleri ve kulüp içi challenge'lar.
+- [ ] **Semantik Arama:** Alıntılar arasında anlamsal (AI destekli) arama motoru.
+- [ ] **Akıllı Bildirimler:** "Bugün kaç sayfa okudun?" ve kişiselleştirilmiş alıntı bildirimleri.
+- [ ] **Sana Özel Sekmesi:** Alıntıların analizi ile derin entelektüel karakter analizi ve yeni öneriler.
+yönlendirmelerinin (Active, Library, Clubs, Profile) sayfalar arası geçişi sağladığı test edilecektir.
 5.  Özel fontların (Inter, Lora) sisteme yüklendiği ve metinlerde düzgün render edildiği kontrol edilecektir.
 
 ## User Review Required
 Bu plan, projenin "sıfırdan" Expo kullanılarak ayağa kaldırılması ve klasör/navigasyon mimarisinin belirlenmesi içindir. Özel bir state management aracı (Redux vs.) belirtilmemiştir, Context API ve/veya Zustand kullanımı (gerektiğinde) öngörülmektedir. Veritabanı olarak performans ve offline-first yapısı nedeniyle WatermelonDB seçilmiştir.
 
-Lütfen bu teknik iskeleti onaylayın. Onayınızın ardından \`npx create-expo-app\` komutu ile projeyi dizine oluşturmaya ve Phase 1 görevlerini tamamlamaya başlayacağım.
+Lütfen bu teknik iskeleti onaylayın. Onayınızın ardından `npx create-expo-app` komutu ile projeyi dizine oluşturmaya ve Phase 1 görevlerini tamamlamaya başlayacağım.

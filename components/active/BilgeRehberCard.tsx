@@ -13,6 +13,12 @@ interface BilgeRehberCardProps {
   currentBook: any;
   colors: any;
   isDark: boolean;
+  briefingData?: {
+    focus: string;
+    importance: string;
+    story: string;
+    message: string;
+  } | null;
 }
 
 export const BilgeRehberCard: React.FC<BilgeRehberCardProps> = ({
@@ -22,7 +28,8 @@ export const BilgeRehberCard: React.FC<BilgeRehberCardProps> = ({
   currentBookTitle,
   currentBook,
   colors,
-  isDark
+  isDark,
+  briefingData
 }) => {
   return (
     <Animated.View entering={FadeInUp.delay(600).duration(800)} style={[styles.bookInfoCard, { borderColor: colors.surfaceGlass }]}>
@@ -43,23 +50,47 @@ export const BilgeRehberCard: React.FC<BilgeRehberCardProps> = ({
           <View style={styles.briefingContent}>
             {isExpanded && (
               <Animated.View entering={FadeInDown.duration(400)}>
+                {/* 1. Odak */}
                 <View style={styles.briefSection}>
                   <View style={styles.sectionHeader}>
                     <Ionicons name="compass-outline" size={16} color={colors.primary} />
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Odak Alanları</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Zihinsel Odak</Text>
                   </View>
                   <Text style={[styles.sectionText, { color: colors.text }]}>
-                    {currentBook ? `Okurken yazarın temel argümanlarına, alt metindeki gizli temalara ve metaforlara odaklanın. Zihninizi yeni perspektiflere açarak yazarın dünyasına bir bilge gibi süzülün.` : "Okumak, zihnin en asil yolculuğudur. Bugün bu yolculuğa başlamaya ne dersiniz?"}
+                    {briefingData ? briefingData.focus : "Okurken yazarın temel argümanlarına ve saklı temalara odaklanın."}
                   </Text>
                 </View>
 
+                {/* 2. Önem */}
                 <View style={styles.briefSection}>
                   <View style={styles.sectionHeader}>
                     <Ionicons name="medal-outline" size={16} color={colors.primary} />
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Eserin Önemi</Text>
                   </View>
                   <Text style={[styles.sectionText, { color: colors.textMuted }]}>
-                    {currentBook ? `${currentBook.author}'ın bu eseri, hem kendi düşünsel evriminde bir dönüm noktası hem de edebi dünyada sarsılmaz bir yere sahip. Kişisel gelişiminiz için bu eserin derinliklerini keşfedin.` : "Kütüphanenize kitap ekleyerek Bilge Rehber'in analizlerini görün."}
+                    {briefingData ? briefingData.importance : "Bu eser düşünsel evriminizde bir dönüm noktası olabilir."}
+                  </Text>
+                </View>
+
+                {/* 3. Hikaye */}
+                <View style={styles.briefSection}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="book-outline" size={16} color={colors.primary} />
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Ruhun Hikayesi</Text>
+                  </View>
+                  <Text style={[styles.sectionText, { color: colors.textMuted }]}>
+                    {briefingData ? briefingData.story : "Her kitabın bir ruhu vardır, bu ruhun peşinden gidin."}
+                  </Text>
+                </View>
+
+                {/* 4. Mesaj */}
+                <View style={[styles.briefSection, { marginBottom: 0 }]}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="mail-unread-outline" size={16} color={colors.primary} />
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Sana Özel Mesaj</Text>
+                  </View>
+                  <Text style={[styles.sectionText, { color: colors.text, fontStyle: 'italic' }]}>
+                    {briefingData ? briefingData.message : "Okuma yolculuğun değerli bir keşif süreci."}
                   </Text>
                 </View>
               </Animated.View>
@@ -69,26 +100,12 @@ export const BilgeRehberCard: React.FC<BilgeRehberCardProps> = ({
               <View style={styles.briefSection}>
                 <View style={styles.sectionHeader}>
                   <Ionicons name="compass-outline" size={16} color={colors.primary} />
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Odak Alanları</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Zihinsel Odak</Text>
                 </View>
                 <Text style={[styles.sectionText, { color: colors.text }]} numberOfLines={2}>
-                  {currentBook ? `Okurken yazarın temel argümanlarına ve alt metindeki gizli temalara odaklanın...` : "Okumak, zihnin en asil yolculuğudur..."}
+                  {briefingData ? briefingData.focus : "Okurken yazarın temel argümanlarına ve saklı temalara odaklanın..."}
                 </Text>
               </View>
-            )}
-
-            {isExpanded && (
-              <Animated.View entering={FadeInUp.duration(400)}>
-                <View style={styles.briefSection}>
-                  <View style={styles.sectionHeader}>
-                    <Ionicons name="library-outline" size={16} color={colors.primary} />
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Tarihsel Bağlam</Text>
-                  </View>
-                  <Text style={[styles.sectionText, { color: colors.textMuted }]}>
-                    {currentBook ? `Eserin yazıldığı dönemin siyasi ve sosyal yapısı, yazarın kalemini doğrudan şekillendirmiş. Tarihsel arka planı anlamak, metni daha derinden kavramanızı sağlayacak.` : "Yeni bir kitap ekleyerek tarihsel analizleri aktif edin."}
-                  </Text>
-                </View>
-              </Animated.View>
             )}
 
             {!isExpanded && (
