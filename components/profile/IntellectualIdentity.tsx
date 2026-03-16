@@ -5,9 +5,46 @@ import { FONTS, SPACING } from '../../constants/theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useUser } from '../../store/UserContext';
+import { useLibrary } from '../../store/LibraryContext';
+import { analyzeIntellectualIdentity } from '../../services/identityAnalysis';
+import * as Haptics from 'expo-haptics';
+import { ActivityIndicator, TouchableOpacity } from 'react-native';
 
 export default function IntellectualIdentity() {
   const { colors, isDark } = useTheme();
+  const { profile, updateProfile } = useUser();
+  const { activeBooks, finishedBooks, waitlistBooks } = useLibrary();
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+  // Collect all data for analysis
+  const allBooks = [...activeBooks, ...finishedBooks, ...waitlistBooks];
+  const allQuotes = allBooks.flatMap(b => b.quotes || []);
+  const allNotes = allBooks.flatMap(b => b.notes || []);
+
+  const handleRunAnalysis = async () => {
+    if (isAnalyzing) return;
+    
+    setIsAnalyzing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const result = await analyzeIntellectualIdentity(allBooks, allQuotes, allNotes);
+      await updateProfile({ intellectual_identity: result });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const identity = profile?.intellectual_identity || {
+    title: "Edebi Kaşif",
+    description: "Okuma verilerin analiz edilerek entelektüel karakterin burada şekillenecek.",
+    traits: ["Keşif", "Analiz", "Derinlik"]
+  };
 
   return (
     <Animated.View 
@@ -17,14 +54,40 @@ export default function IntellectualIdentity() {
       <BlurView intensity={isDark ? 20 : 40} tint={isDark ? 'dark' : 'light'} style={styles.blurCard}>
         <View style={styles.content}>
           <View style={[styles.iconContainer, { backgroundColor: colors.highlight }]}>
-            <Ionicons name="infinite" size={24} color={colors.primary} />
+            {isAnalyzing ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <Ionicons name="infinite" size={24} color={colors.primary} />
+            )}
           </View>
           <View style={styles.textContainer}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>Entelektüel Kimlik</Text>
-            <Text style={[styles.identityTitle, { color: colors.text }]}>Edebi Kaşif</Text>
+            <View style={styles.headerRow}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Entelektüel Kimlik</Text>
+              {(allBooks.length > 0) && (
+                <TouchableOpacity onPress={handleRunAnalysis} disabled={isAnalyzing}>
+                  <Ionicons 
+                    name="refresh" 
+                    size={14} 
+                    color={isAnalyzing ? colors.textMuted : colors.primary} 
+                    style={{ marginLeft: 8 }}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text style={[styles.identityTitle, { color: colors.text }]}>{identity.title}</Text>
             <Text style={[styles.description, { color: colors.textMuted }]}>
-              Derinlikli romanlar ve varoluşçu felsefeye olan ilgin seni bir kaşif kılıyor.
+              {identity.description}
             </Text>
+            
+            {identity.traits && (
+              <View style={styles.traitsContainer}>
+                {identity.traits.map((trait, idx) => (
+                  <View key={idx} style={[styles.traitBadge, { backgroundColor: colors.surfaceLight }]}>
+                    <Text style={[styles.traitText, { color: colors.textMuted }]}>{trait}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </View>
       </BlurView>
@@ -64,6 +127,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
   },
   identityTitle: {
@@ -75,5 +142,20 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary.regular,
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 12,
   },
+  traitsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  traitBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  traitText: {
+    fontFamily: FONTS.primary.medium,
+    fontSize: 11,
+  }
 });

@@ -9,6 +9,12 @@ export interface UserProfile {
   avatar_url: string | null;
   bio: string | null;
   taste_profile?: any;
+  intellectual_identity?: {
+    title: string;
+    description: string;
+    traits: string[];
+    analysisDate: string;
+  } | null;
 }
 
 interface UserContextType {
