@@ -30,18 +30,22 @@ export default function Login() {
     }
 
     setLoading(true);
+    console.log("Starting auth in mode:", isLoginMode ? "Giriş" : "Kayıt");
     try {
       if (isLoginMode) {
         await signIn(username, password);
+        console.log("Sign in successful");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)/active');
       } else {
         await signUp(username, password, fullName);
+        console.log("Sign up successful");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(auth)/onboarding'); // First time users go to onboarding
+        router.replace('/(auth)/onboarding');
       }
     } catch (error: any) {
-      Alert.alert("Hata", error.message || "Bir şeyler ters gitti.");
+      console.error("Auth error:", error);
+      Alert.alert("Hata", error.message || "Girdiğiniz bilgiler hatalı olabilir veya sunucu bağlantısı kurulamadı.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);

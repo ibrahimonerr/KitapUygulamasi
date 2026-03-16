@@ -16,13 +16,7 @@ interface CollectiveProgressProps {
   isDark: boolean;
 }
 
-const MEMBERS = [
-  { id: '1', name: 'Zeynep', progress: 85, avatar: 'https://i.pravatar.cc/150?u=1' },
-  { id: '2', name: 'Can', progress: 62, avatar: 'https://i.pravatar.cc/150?u=2' },
-  { id: '3', name: 'Sen', progress: 12, avatar: 'https://i.pravatar.cc/150?u=3', isMe: true },
-  { id: '4', name: 'Elif', progress: 30, avatar: 'https://i.pravatar.cc/150?u=4' },
-  { id: '5', name: 'Mert', progress: 50, avatar: 'https://i.pravatar.cc/150?u=5' },
-];
+const MEMBERS: any[] = [];
 
 export const CollectiveProgress: React.FC<CollectiveProgressProps> = ({ colors, isDark }) => {
   

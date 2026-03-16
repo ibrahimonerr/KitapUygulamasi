@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { database } from '../model/database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BookModel from '../model/Book';
 import QuoteModel from '../model/Quote';
 import NoteModel from '../model/Note';
@@ -27,6 +28,7 @@ interface LibraryContextType {
   reorderActiveBooks: (index: number) => void;
   addQuoteToBook: (bookId: string, quote: { text: string, page: number }) => void;
   addNoteToBook: (bookId: string, noteText: string) => void;
+  resetDatabase: () => Promise<void>;
   isLoading: boolean;
   taste: { authors: string[], genres: string[] };
   setTaste: (taste: { authors: string[], genres: string[] }) => void;
@@ -136,6 +138,22 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const resetDatabase = async () => {
+    try {
+      await database.write(async () => {
+        await (database as any).unsafeClearDatabase();
+      });
+      await AsyncStorage.removeItem('@clubs_data_v2');
+      console.log("Database and Clubs cleared!");
+      // Force refresh (optional, but simple for this task)
+      setActiveBooks([]);
+      setFinishedBooks([]);
+      setWaitlistBooks([]);
+    } catch (e) {
+      console.error("Reset failed", e);
+    }
+  };
+
   return (
     <LibraryContext.Provider
       value={{
@@ -148,6 +166,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         reorderActiveBooks,
         addQuoteToBook,
         addNoteToBook,
+        resetDatabase,
         isLoading,
         taste,
         setTaste,

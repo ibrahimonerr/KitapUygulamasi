@@ -161,12 +161,6 @@ export default function LibraryTab() {
       <Animated.View style={headerStyle}>
         <View style={styles.headerContentLine}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Kitaplığım</Text>
-          <TouchableOpacity 
-            style={[styles.scanButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
-            onPress={() => setIsScannerVisible(true)}
-          >
-            <Ionicons name="barcode-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
         </View>
       </Animated.View>
 
@@ -181,16 +175,32 @@ export default function LibraryTab() {
           {/* Raf Bölümleri */}
           <View style={styles.shelvesContainer}>
               <View style={styles.shelfRow}>
-                <Text style={[styles.shelfLabel, { color: colors.text }]}>Biten Yolculuklar</Text>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.shelfLabel, { color: colors.text, marginBottom: 0 }]}>Biten Yolculuklar</Text>
+                  <TouchableOpacity 
+                    style={[styles.scanButtonMini, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                    onPress={() => setIsScannerVisible(true)}
+                  >
+                    <Ionicons name="barcode-outline" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
                 <StackedShelf books={readBooks} onBookPress={setSelectedBook} colors={colors} isDark={isDark} />
               </View>
 
               <View style={[styles.shelfRow, { marginTop: SPACING.l }]}>
                 <View style={styles.sectionHeader}>
                   <Text style={[styles.shelfLabel, { color: colors.text, marginBottom: 0 }]}>Bekleyen Maceralar</Text>
-                  <TouchableOpacity style={styles.sectionAddButton} onPress={() => handleAddBook('waitlist')}>
-                    <Ionicons name="add-circle" size={26} color={colors.primary} />
-                  </TouchableOpacity>
+                  <View style={{flexDirection: 'row', gap: 10}}>
+                    <TouchableOpacity 
+                      style={[styles.scanButtonMini, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                      onPress={() => setIsScannerVisible(true)}
+                    >
+                      <Ionicons name="barcode-outline" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.sectionAddButton} onPress={() => handleAddBook('waitlist')}>
+                      <Ionicons name="add-circle" size={26} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <StackedShelf books={toReadBooks} onBookPress={setSelectedBook} colors={colors} isDark={isDark} />
               </View>
@@ -432,109 +442,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  addButtonGradient: {
-    flex: 1,
+  scanButtonMini: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  activeSection: {
-    paddingHorizontal: SPACING.xl,
-    marginBottom: SPACING.m,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.l,
-  },
-  sectionTitle: {
-    fontFamily: FONTS.serif.bold,
-    fontSize: 22,
-    marginLeft: 10,
-  },
-  sectionAddButton: {
-    padding: 4,
-  },
-  stackContainer: {
-    height: 220,
-    width: '100%',
-    alignItems: 'center',
-    paddingTop: 10,
-  },
-  bookCardWrapper: {
-    position: 'absolute',
-    width: '100%',
-    height: 140,
-    borderRadius: 24,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  bookCardBlur: {
-    flex: 1,
-  },
-  bookCardContent: {
-    flex: 1,
-    flexDirection: 'row',
-    padding: 16,
-    alignItems: 'center',
-  },
-  bookCardCover: {
-    width: 70,
-    height: 100,
-    borderRadius: 8,
-  },
-  bookCardInfo: {
-    flex: 1,
-    marginLeft: 16,
-    justifyContent: 'center',
-  },
-  bookCardTitle: {
-    fontFamily: FONTS.serif.bold,
-    fontSize: 18,
-    marginBottom: 4,
-  },
-  bookCardAuthor: {
-    fontFamily: FONTS.primary.regular,
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  progressContainer: {
-    width: '100%',
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: 2,
-    width: '100%',
-    marginBottom: 6,
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressText: {
-    fontFamily: FONTS.primary.semiBold,
-    fontSize: 11,
   },
   shelvesContainer: {
     paddingHorizontal: SPACING.xl,
   },
   shelfRow: {
     width: '100%',
+    marginBottom: SPACING.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.m,
   },
   shelfLabel: {
     fontFamily: FONTS.serif.bold,
     fontSize: 20,
-    marginBottom: SPACING.m,
+  },
+  sectionAddButton: {
+    padding: 4,
   },
   shelfScroll: {
     paddingRight: SPACING.xl,
@@ -549,7 +482,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 5, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
-    elevation: 10,
+    elevation: 8,
+    marginRight: SPACING.m,
   },
   stackedShelfCover: {
     width: '100%',
@@ -566,43 +500,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary.semiBold,
     fontSize: 11,
     textAlign: 'center',
-  },
-  addBookSlot: {
-    position: 'absolute',
-    width: '100%',
-    height: 140,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
-  addBookText: {
-    fontFamily: FONTS.primary.semiBold,
-    fontSize: 14,
-    marginTop: 8,
-  },
-  finishBookButton: {
-    marginTop: 20,
-    marginBottom: 20,
-    height: 56,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  finishButtonGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  finishButtonText: {
-    color: '#FFF',
-    fontFamily: FONTS.primary.bold,
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
   },
   modalBackdrop: {
     flex: 1,
@@ -676,7 +573,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
-    borderLeftWidth: 4,
   },
   noteText: {
     fontFamily: FONTS.primary.regular,
@@ -701,11 +597,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 24,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
   },
   panelHeader: {
     flexDirection: 'row',
@@ -724,7 +615,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     minHeight: 100,
     textAlignVertical: 'top',
-    lineHeight: 22,
   },
   premiumActionRow: {
     flexDirection: 'row',
@@ -746,7 +636,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   premiumScanButton: {
-    backgroundColor: '#007AFF', // Image sync
     height: 44,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -789,6 +678,122 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary.semiBold,
     fontSize: 14,
     marginLeft: 8,
+  },
+  finishBookButton: {
+    marginTop: 20,
+    marginBottom: 20,
+    height: 56,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  finishButtonGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  finishButtonText: {
+    color: '#FFF',
+    fontFamily: FONTS.primary.bold,
+    fontSize: 16,
+  },
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  addButtonGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeSection: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.m,
+  },
+  sectionTitle: {
+    fontFamily: FONTS.serif.bold,
+    fontSize: 22,
+    marginLeft: 10,
+  },
+  stackContainer: {
+    height: 220,
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 10,
+  },
+  bookCardWrapper: {
+    position: 'absolute',
+    width: '100%',
+    height: 140,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  bookCardBlur: {
+    flex: 1,
+  },
+  bookCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 16,
+    alignItems: 'center',
+  },
+  bookCardCover: {
+    width: 70,
+    height: 100,
+    borderRadius: 8,
+  },
+  bookCardInfo: {
+    flex: 1,
+    marginLeft: 16,
+    justifyContent: 'center',
+  },
+  bookCardTitle: {
+    fontFamily: FONTS.serif.bold,
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  bookCardAuthor: {
+    fontFamily: FONTS.primary.regular,
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  progressContainer: {
+    width: '100%',
+  },
+  progressBarBg: {
+    height: 4,
+    borderRadius: 2,
+    width: '100%',
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  progressText: {
+    fontFamily: FONTS.primary.semiBold,
+    fontSize: 11,
+  },
+  addBookSlot: {
+    position: 'absolute',
+    width: '100%',
+    height: 140,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  addBookText: {
+    fontFamily: FONTS.primary.semiBold,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   addInlinePanel: {
     padding: 16,

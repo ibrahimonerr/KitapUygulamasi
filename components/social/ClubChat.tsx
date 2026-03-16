@@ -49,38 +49,9 @@ export const ClubChat: React.FC<ClubChatProps> = ({
   const flatListRef = useRef<FlatList>(null);
   const MY_USER_ID = 'user_unique_id_123'; // Logic would come from Auth
 
-  // Mock messages for display until Supabase Realtime is connected
   useEffect(() => {
-    const mockMessages: Message[] = [
-      {
-        id: '1',
-        user_id: 'other_user_1',
-        user_name: 'Ahmet Y.',
-        user_avatar: 'https://i.pravatar.cc/150?u=ahmet',
-        text: 'Arkadaşlar 120. sayfadaki o tahlil beni bitirdi. Oğuz Atay gerçekten insanın içini okuyor.',
-        created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-        type: 'page',
-        page_number: 120
-      },
-      {
-        id: '2',
-        user_id: 'other_user_2',
-        user_name: 'Zeynep K.',
-        user_avatar: 'https://i.pravatar.cc/150?u=zeynep',
-        text: 'Kesinlikle katılıyorum. "Kelimeler, albayım, bazı anlamlara gelmiyor." alıntısı tam da o hissi özetliyor.',
-        created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-        type: 'quote'
-      },
-      {
-        id: '3',
-        user_id: MY_USER_ID,
-        user_name: 'Ben',
-        user_avatar: 'https://i.pravatar.cc/150?u=me',
-        text: 'Dönüp dönüp tekrar okuyorum o kısımları.',
-        created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      }
-    ];
-    setMessages(mockMessages);
+    // Starting with empty messages
+    setMessages([]);
   }, []);
 
   const handleSendMessage = () => {
@@ -161,7 +132,7 @@ export const ClubChat: React.FC<ClubChatProps> = ({
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Kulüp Sohbeti</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>3 üye aktif</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>1 üye aktif</Text>
         </View>
         <View style={{ width: 44 }} />
       </View>

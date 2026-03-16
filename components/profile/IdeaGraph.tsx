@@ -18,27 +18,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Line } from 'react-native-svg';
 import { generateIdeaGraphData, GraphNode, GraphLink } from '../../services/graphService';
-import { BlurView } from 'expo-blur';
-import { FONTS, SPACING } from '../../constants/theme';
-import { useTheme } from '../../hooks/useTheme';
-import { useLibrary } from '../../store/LibraryContext';
-import * as Haptics from 'expo-haptics';
-import Animated, { 
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming, 
-  withSequence,
-  useSharedValue,
-  FadeIn,
-  FadeOut,
-  SlideInUp
-} from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 const GRAPH_HEIGHT = height * 0.6;
-
-import { analyzeContentWithAI } from '../../services/ai';
 
 const IdeaNode = ({ node, isSelected, onPress }: { node: GraphNode, isSelected: boolean, onPress: () => void }) => {
   const translateY = useSharedValue(0);

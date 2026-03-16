@@ -11,10 +11,7 @@ interface FocusRoomCardProps {
   isDark: boolean;
 }
 
-const ACTIVE_MEMBERS = [
-  { id: '1', name: 'Zeynep', avatar: 'https://i.pravatar.cc/150?u=1' },
-  { id: '2', name: 'Can', avatar: 'https://i.pravatar.cc/150?u=2' },
-];
+const ACTIVE_MEMBERS: any[] = [];
 
 export const FocusRoomCard: React.FC<FocusRoomCardProps> = ({ colors, isDark }) => {
   const [isInRoom, setIsInRoom] = useState(false);

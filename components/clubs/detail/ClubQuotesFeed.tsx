@@ -30,31 +30,7 @@ interface FeedItem {
   comments: FeedComment[];
 }
 
-const INITIAL_ITEMS: FeedItem[] = [
-  {
-    id: '1',
-    user: { name: 'Can Demir', avatar: 'https://i.pravatar.cc/150?u=2' },
-    type: 'quote',
-    content: 'Dünya bana karanlık geldiğinde, kendimden çıkıp kendime baktığımda anladım ki, karanlık benim içimdeymiş.',
-    page: 45,
-    date: 'Bugün',
-    likes: 7,
-    isLiked: false,
-    comments: [
-      { id: 'c1', text: 'Bu alıntı tam anlamıyla Selim Işık\'ın ruh halini özetliyor.', author: 'Zeynep', date: 'Bugün' }
-    ]
-  },
-  {
-    id: '2',
-    user: { name: 'Sen', avatar: 'https://i.pravatar.cc/150?u=3' },
-    type: 'note',
-    content: 'Oğuz Atay\'ın bilinç akışı tekniği, okuyucuyu karakterin zihninin içine sokuyor. Turgut\'un mektupları özellikle çarpıcı.',
-    date: 'Dün',
-    likes: 3,
-    isLiked: true,
-    comments: []
-  },
-];
+const INITIAL_ITEMS: FeedItem[] = [];
 
 export const ClubQuotesFeed: React.FC<ClubQuotesFeedProps> = ({ colors, isDark }) => {
   const [items, setItems] = useState<FeedItem[]>(INITIAL_ITEMS);

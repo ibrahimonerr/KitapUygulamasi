@@ -9,28 +9,7 @@ interface FriendsActivityListProps {
   isDark: boolean;
 }
 
-const FRIENDS_ACTIVITY = [
-  {
-    id: '1',
-    name: 'Can Demir',
-    avatar: 'https://i.pravatar.cc/150?u=2',
-    currentBook: 'Dune',
-    author: 'Frank Herbert',
-    progress: 65,
-    lastNote: 'Çöl gezegeninin atmosferi muazzam betimlenmiş.',
-    cover: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=3088&auto=format&fit=crop'
-  },
-  {
-    id: '2',
-    name: 'Zeynep Kaya',
-    avatar: 'https://i.pravatar.cc/150?u=1',
-    currentBook: 'Küçük Prens',
-    author: 'Antoine de Saint-Exupéry',
-    progress: 90,
-    lastNote: 'Gözler asıl görülmesi gerekeni göremez.',
-    cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=3087&auto=format&fit=crop'
-  }
-];
+const FRIENDS_ACTIVITY: any[] = [];
 
 export const FriendsActivityList: React.FC<FriendsActivityListProps> = ({ colors, isDark }) => {
   return (

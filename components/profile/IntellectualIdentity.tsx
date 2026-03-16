@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   traitText: {
-    fontFamily: FONTS.primary.medium,
+    fontFamily: FONTS.primary.semiBold,
     fontSize: 11,
   }
 });

@@ -34,7 +34,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       loadProfile(user.id);
     } else {
-      setProfile(null);
+      setProfile({
+        id: 'guest',
+        username: 'misafir',
+        full_name: 'Misafir Okur',
+        avatar_url: null,
+        bio: 'Okuma yolculuğuna misafir olarak devam ediyor.',
+      });
       setIsLoading(false);
     }
   }, [user]);
@@ -48,7 +54,27 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (error) {
+      if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist, create a default one
+        console.log('Profile not found, creating default for user:', userId);
+        const newProfile = {
+          id: userId,
+          username: user?.email?.split('@')[0] || 'kullanici',
+          full_name: user?.user_metadata?.full_name || 'Yeni Okur',
+          avatar_url: null,
+          bio: 'Kitap tutkunu.',
+        };
+        
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert(newProfile);
+          
+        if (!insertError) {
+          setProfile(newProfile);
+        } else {
+          console.error('Failed to create default profile:', insertError);
+        }
+      } else if (error) {
         console.error('Profile load error:', error);
       } else if (data) {
         setProfile(data);

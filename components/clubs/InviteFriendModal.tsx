@@ -21,13 +21,7 @@ import { FONTS, SPACING } from '../../constants/theme';
 const { width, height } = Dimensions.get('window');
 
 // Mock friends data
-const FRIENDS = [
-  { id: '1', name: 'Zeynep Kaya', avatar: 'https://i.pravatar.cc/150?u=zeynep' },
-  { id: '2', name: 'Can Demir', avatar: 'https://i.pravatar.cc/150?u=can' },
-  { id: '3', name: 'Elif Yılmaz', avatar: 'https://i.pravatar.cc/150?u=elif' },
-  { id: '4', name: 'Mert Akın', avatar: 'https://i.pravatar.cc/150?u=mert' },
-  { id: '5', name: 'Selin Şahin', avatar: 'https://i.pravatar.cc/150?u=selin' },
-];
+const FRIENDS: any[] = [];
 
 interface InviteFriendModalProps {
   isVisible: boolean;

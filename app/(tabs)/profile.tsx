@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Platform, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS, SPACING } from '../../constants/theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -29,11 +30,22 @@ import { useUser } from '../../store/UserContext';
 const { width } = Dimensions.get('window');
 
 export default function ProfileTab() {
+  const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { profile } = useUser();
+  const { profile, isLoading } = useUser();
   const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = React.useState(false);
   const [isNotifModalVisible, setIsNotifModalVisible] = React.useState(false);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  const isGuest = profile?.id === 'guest';
   
   const scrollY = useSharedValue(0);
 
@@ -113,25 +125,34 @@ export default function ProfileTab() {
         <Animated.View entering={FadeInDown.delay(100)} style={styles.profileHeader}>
           <View style={[styles.avatarContainer, { borderColor: colors.primary }]}>
             <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surfaceMedium }]}>
-              {profile.avatar ? (
-                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
               ) : (
                 <Ionicons name="person" size={50} color={colors.textMuted} />
               )}
             </View>
             <View style={styles.premiumBadge}>
-              <Ionicons name="sparkles" size={12} color="#FFF" />
+              <Ionicons name={isGuest ? "help-circle" : "sparkles"} size={12} color="#FFF" />
             </View>
           </View>
-          <Text style={[styles.userName, { color: colors.text }]}>{profile.name}</Text>
-          <Text style={[styles.userBio, { color: colors.textMuted }]}>{profile.bio}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{profile?.full_name}</Text>
+          <Text style={[styles.userBio, { color: colors.textMuted }]}>{profile?.bio}</Text>
           
-          <TouchableOpacity 
-            onPress={() => setIsEditModalVisible(true)}
-            style={[styles.editProfileButton, { backgroundColor: colors.surfaceLight }]}
-          >
-            <Text style={[styles.editProfileText, { color: colors.text }]}>Profili Düzenle</Text>
-          </TouchableOpacity>
+          {isGuest ? (
+            <TouchableOpacity 
+              onPress={() => router.replace('/(auth)/login')}
+              style={[styles.editProfileButton, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.editProfileText, { color: '#FFF' }]}>Giriş Yap / Kayıt Ol</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              onPress={() => setIsEditModalVisible(true)}
+              style={[styles.editProfileButton, { backgroundColor: colors.surfaceLight }]}
+            >
+              <Text style={[styles.editProfileText, { color: colors.text }]}>Profili Düzenle</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
 
         <View style={styles.statsRow}>

@@ -20,7 +20,7 @@ export default function MentorReport() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Haftalık Analiz</Text>
         </View>
         <Text style={[styles.reportContent, { color: colors.textMuted }]}>
-          Bu hafta en çok "Kendiyle Hesaplaşma" ve "Toplumsal Baskı" temaları üzerine yoğunlaştın. 128 sayfa okuyarak son 3 haftanın en yüksek derinliğine ulaştın.
+          Okuma verilerin toplandıkça burada haftalık analizlerini görebilirsin.
         </Text>
       </View>
 
@@ -34,9 +34,8 @@ export default function MentorReport() {
             <Ionicons name="book" size={24} color={colors.textMuted} />
           </View>
           <View style={styles.recommendationText}>
-            <Text style={[styles.bookTitle, { color: colors.text }]}>Siddhartha</Text>
-            <Text style={[styles.bookAuthor, { color: colors.textMuted }]}>Hermann Hesse</Text>
-            <Text style={[styles.reason, { color: colors.primary }]}>İçsel yolculuk temanla tam uyumlu.</Text>
+            <Text style={[styles.bookTitle, { color: colors.text }]}>Henüz Öneri Yok</Text>
+            <Text style={[styles.bookAuthor, { color: colors.textMuted }]}>Kitap okudukça sana özel öneriler sunacağız.</Text>
           </View>
         </View>
       </View>

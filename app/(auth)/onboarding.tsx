@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,7 @@ import { FONTS, SPACING } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
 import { useLibrary } from '../../store/LibraryContext';
+import { Image as ExpoImage } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
@@ -59,9 +60,13 @@ export default function Onboarding() {
   const [visibleGenres, setVisibleGenres] = useState<string[]>(GENRES_POOL.slice(0, 6));
 
   // Book Inputs
-  const [activeBook, setActiveBook] = useState({ title: '', author: '' });
-  const [finishedBook, setFinishedBook] = useState({ title: '', author: '' });
-  const [targetBook, setTargetBook] = useState({ title: '', author: '' });
+  const [activeBook, setActiveBook] = useState<any>(null);
+  const [finishedBook, setFinishedBook] = useState<any>(null);
+  const [targetBook, setTargetBook] = useState<any>(null);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const progress = useSharedValue(0.25);
 
@@ -73,10 +78,45 @@ export default function Onboarding() {
     if (currentStep < STEPS.length - 1) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setCurrentStep(currentStep + 1);
+      setSearchQuery('');
+      setSearchResults([]);
     } else {
       completeOnboarding();
     }
   };
+
+  const searchBooks = async (query: string) => {
+    if (query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`);
+      const data = await response.json();
+      if (data.items) {
+        const mapped = data.items.map((item: any) => ({
+          id: item.id,
+          title: item.volumeInfo.title,
+          author: item.volumeInfo.authors ? item.volumeInfo.authors[0] : 'Bilinmeyen Yazar',
+          cover: item.volumeInfo.imageLinks?.thumbnail?.replace('http:', 'https:') || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop',
+          pages: item.volumeInfo.pageCount?.toString() || '300'
+        }));
+        setSearchResults(mapped);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery) searchBooks(searchQuery);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const completeOnboarding = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -85,35 +125,35 @@ export default function Onboarding() {
     setTaste({ authors: selectedAuthors, genres: selectedGenres });
     
     // Add books if provided
-    if (activeBook.title) {
+    if (activeBook) {
       addBook({
         title: activeBook.title,
-        author: activeBook.author || 'Bilinmiyor',
-        cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop',
+        author: activeBook.author,
+        cover: activeBook.cover,
         progress: 10,
-        pages: '300',
+        pages: activeBook.pages,
         status: 'active'
       }, 'active');
     }
 
-    if (finishedBook.title) {
+    if (finishedBook) {
       addBook({
         title: finishedBook.title,
-        author: finishedBook.author || 'Bilinmiyor',
-        cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=800&auto=format&fit=crop',
+        author: finishedBook.author,
+        cover: finishedBook.cover,
         progress: 100,
-        pages: '250',
+        pages: finishedBook.pages,
         status: 'finished'
       }, 'finished');
     }
 
-    if (targetBook.title) {
+    if (targetBook) {
       addBook({
         title: targetBook.title,
-        author: targetBook.author || 'Bilinmiyor',
-        cover: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?q=80&w=800&auto=format&fit=crop',
+        author: targetBook.author,
+        cover: targetBook.cover,
         progress: 0,
-        pages: '400',
+        pages: targetBook.pages,
         status: 'waitlist'
       }, 'waitlist');
     }
@@ -202,25 +242,57 @@ export default function Onboarding() {
     </Animated.View>
   );
 
-  const renderBookInputStep = (book: any, setBook: any, icon: string) => (
+  const renderBookInputStep = (selectedBook: any, setBook: any, icon: string) => (
     <Animated.View entering={FadeInDown} style={styles.stepContainer}>
       <View style={styles.inputCard}>
-        <BlurView intensity={20} tint={isDark ? "light" : "dark"} style={[styles.inputBlur, { borderColor: colors.border }]}>
-          <Ionicons name={icon as any} size={48} color={colors.primary} style={{ marginBottom: SPACING.l }} />
-          <TextInput
-            placeholder="Kitap Adı"
-            placeholderTextColor={colors.textMuted}
-            style={[styles.input, { color: colors.text, borderBottomColor: colors.border }]}
-            value={book.title}
-            onChangeText={text => setBook({ ...book, title: text })}
-          />
-          <TextInput
-            placeholder="Yazar (Opsiyonel)"
-            placeholderTextColor={colors.textMuted}
-            style={[styles.input, { color: colors.text, borderBottomColor: colors.border, marginTop: SPACING.m }]}
-            value={book.author}
-            onChangeText={text => setBook({ ...book, author: text })}
-          />
+        <BlurView intensity={20} tint={isDark ? "light" : "dark"} style={[styles.inputBlur, { borderColor: colors.border, padding: SPACING.m }]}>
+          <Ionicons name={icon as any} size={32} color={colors.primary} style={{ marginBottom: SPACING.m }} />
+          
+          <View style={[styles.searchContainer, { backgroundColor: colors.surfaceLight }]}>
+            <Ionicons name="search" size={20} color={colors.textMuted} />
+            <TextInput
+              placeholder="Kitap ara..."
+              placeholderTextColor={colors.textMuted}
+              style={[styles.searchInput, { color: colors.text }]}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          {isSearching && (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: SPACING.m }} />
+          )}
+
+          <ScrollView style={styles.resultsList} keyboardShouldPersistTaps="handled">
+            {searchResults.map((item) => (
+              <TouchableOpacity 
+                key={item.id}
+                onPress={() => {
+                  setBook(item);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={[styles.resultItem, { backgroundColor: selectedBook?.id === item.id ? colors.highlight : 'transparent' }]}
+              >
+                <ExpoImage source={{ uri: item.cover }} style={styles.resultCover} contentFit="cover" />
+                <View style={styles.resultInfo}>
+                  <Text style={[styles.resultTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[styles.resultAuthor, { color: colors.textMuted }]}>{item.author}</Text>
+                </View>
+                {selectedBook?.id === item.id && (
+                  <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {selectedBook && !searchQuery && (
+            <Animated.View entering={FadeIn} style={styles.selectedBookCard}>
+              <Text style={[styles.selectedLabel, { color: colors.primary }]}>Seçilen:</Text>
+              <Text style={[styles.selectedTitle, { color: colors.text }]}>{selectedBook.title}</Text>
+            </Animated.View>
+          )}
         </BlurView>
       </View>
     </Animated.View>
@@ -291,6 +363,17 @@ const styles = StyleSheet.create({
   nextText: { color: '#FFF', fontFamily: FONTS.primary.bold, fontSize: 18 },
   skipButton: { marginTop: SPACING.m },
   skipText: { fontFamily: FONTS.primary.semiBold, fontSize: 14 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, marginBottom: SPACING.m },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 16, fontFamily: FONTS.primary.regular },
+  resultsList: { width: '100%', maxHeight: 250 },
+  resultItem: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 12, marginBottom: 8 },
+  resultCover: { width: 40, height: 60, borderRadius: 4 },
+  resultInfo: { flex: 1, marginLeft: 12 },
+  resultTitle: { fontFamily: FONTS.primary.bold, fontSize: 14 },
+  resultAuthor: { fontFamily: FONTS.primary.regular, fontSize: 12, marginTop: 2 },
+  selectedBookCard: { marginTop: SPACING.m, alignItems: 'center', padding: SPACING.m, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', width: '100%' },
+  selectedLabel: { fontFamily: FONTS.primary.bold, fontSize: 12, marginBottom: 4 },
+  selectedTitle: { fontFamily: FONTS.primary.semiBold, fontSize: 15, textAlign: 'center' },
 });
 
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';

@@ -45,34 +45,55 @@ export const ClubsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (user) {
       loadMemberships();
     } else {
-      setMyClubs([]);
-      setMemberships([]);
-      setIsLoading(false);
+      // Guest mode: load from local storage only
+      loadLocalClubs();
     }
   }, [user]);
+
+  const loadLocalClubs = async () => {
+    try {
+      setIsLoading(true);
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const allClubs = stored ? JSON.parse(stored) : [];
+      setMyClubs(allClubs);
+      setMemberships(allClubs.map((c: Club) => c.id));
+    } catch (e) {
+      console.error('Failed to load local clubs', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadMemberships = async () => {
     if (!user) return;
     try {
       setIsLoading(true);
-      // Fetch club memberships from Supabase
-      const { data, error } = await supabase
+      // 1. Fetch club memberships
+      const { data: memberData, error: memberError } = await supabase
         .from('club_members')
         .select('club_id')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (memberError) throw memberError;
       
-      const clubIds = data.map(m => m.club_id);
+      const clubIds = memberData.map(m => m.club_id);
       setMemberships(clubIds);
       
-      // In a real production app, we would fetch club details from a 'clubs' table
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const allClubs = stored ? JSON.parse(stored) : [];
-      
-      // Filter clubs where user is a member
-      const joinedClubs = allClubs.filter((c: Club) => clubIds.includes(c.id));
-      setMyClubs(joinedClubs);
+      // 2. Fetch club details from Supabase if possible, fallback to AsyncStorage
+      const { data: clubData, error: clubError } = await supabase
+        .from('clubs')
+        .select('*')
+        .in('id', clubIds);
+
+      if (!clubError && clubData) {
+        setMyClubs(clubData);
+      } else {
+        // Fallback to legacy AsyncStorage logic
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const allClubs = stored ? JSON.parse(stored) : [];
+        const joinedClubs = allClubs.filter((c: Club) => clubIds.includes(c.id));
+        setMyClubs(joinedClubs);
+      }
     } catch (e) {
       console.error('Failed to load memberships', e);
     } finally {
@@ -81,39 +102,57 @@ export const ClubsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const createClub = async (clubData: Partial<Club>) => {
-    if (!user) return;
+    const userId = user?.id || 'guest';
+    const clubId = Math.random().toString(36).substring(2, 11);
     const newClub: Club = {
-      id: Math.random().toString(36).substring(7),
+      id: clubId,
       name: clubData.name || 'Yeni Kulüp',
       description: clubData.description || '',
       type: clubData.type || 'book',
       privacy: clubData.privacy || 'public',
       members: 1,
       cover: clubData.cover || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?q=80&w=3087&auto=format&fit=crop',
-      adminId: user.id,
+      adminId: userId,
       ...clubData
     } as Club;
 
-    // 1. Add to club_members in Supabase
-    const { error } = await supabase
-      .from('club_members')
-      .insert({
-        club_id: newClub.id,
-        user_id: user.id,
-        role: 'admin'
-      });
-
-    if (error) throw error;
-
-    // 2. Update local state
-    const updatedClubs = [newClub, ...myClubs];
-    setMyClubs(updatedClubs);
+    // Update local state immediately for better UX
+    setMyClubs(prev => [newClub, ...prev]);
     setMemberships(prev => [...prev, newClub.id]);
-    
-    // Save all clubs to local storage (mock for now)
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    const allClubs = stored ? JSON.parse(stored) : [];
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([newClub, ...allClubs]));
+
+    try {
+      if (user) {
+        // 1. Try to insert club into Supabase
+        await supabase
+          .from('clubs')
+          .insert({
+            id: newClub.id,
+            name: newClub.name,
+            description: newClub.description,
+            type: newClub.type,
+            privacy: newClub.privacy,
+            cover: newClub.cover,
+            admin_id: newClub.adminId,
+            members_count: 1
+          });
+
+        // 2. Add to club_members
+        await supabase
+          .from('club_members')
+          .insert({
+            club_id: newClub.id,
+            user_id: user.id,
+            role: 'admin'
+          });
+      }
+
+      // 3. Persistence backup (for both guest and logged in)
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const allClubs = stored ? JSON.parse(stored) : [];
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([newClub, ...allClubs]));
+    } catch (e: any) {
+      console.warn('Backend sync failed, but club created locally:', e);
+    }
   };
 
   const joinClub = async (clubId: string) => {

@@ -24,22 +24,7 @@ interface Prompt {
   comments: Comment[];
 }
 
-const INITIAL_PROMPTS: Prompt[] = [
-  { 
-    id: '1', 
-    question: 'Selim Işık\'ın topluma "tutunamama" hali, günümüz bireyi için de geçerli mi? Hangi yönleriyle benzerlik görüyorsunuz?', 
-    type: 'Analiz',
-    comments: [
-      { id: 'c1', text: 'Sosyal medya çağında tutunamama daha da belirgin hale geldi bence.', author: 'Zeynep', date: 'Bugün' }
-    ]
-  },
-  { 
-    id: '2', 
-    question: 'Oğuz Atay\'ın anlatım tekniği (bilinç akışı, iç monolog) sizi nasıl etkiliyor? Hikâyeye katılımınızı artırıyor mu?', 
-    type: 'Tartışma',
-    comments: []
-  },
-];
+const INITIAL_PROMPTS: Prompt[] = [];
 
 export const WiseMentorPrompts: React.FC<WiseMentorPromptsProps> = ({ colors, isDark }) => {
   const [prompts, setPrompts] = useState<Prompt[]>(INITIAL_PROMPTS);

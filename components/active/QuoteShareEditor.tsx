@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, ScrollView, Platform, Share } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, ScrollView, Platform, Share, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { FONTS, SPACING } from '../../constants/theme';
 
 const { width, height } = Dimensions.get('window');
@@ -33,14 +35,30 @@ export const QuoteShareEditor: React.FC<QuoteShareEditorProps> = ({
   const [mode, setMode] = useState<StyleMode>('glass');
   const [textAlign, setTextAlign] = useState<TextAlign>('center');
   const [useSerif, setUseSerif] = useState(true);
+  const cardRef = useRef<View>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const handleShare = async () => {
     try {
-      await Share.share({
-        message: `${quoteText}\n\n— ${author}${bookTitle ? ` (${bookTitle})` : ''}\n\nBilgeOkur ile paylaşıldı.`,
+      setIsCapturing(true);
+      const uri = await captureRef(cardRef, {
+        format: 'png',
+        quality: 1.0,
       });
+      
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri);
+      } else {
+        await Share.share({
+          message: `${quoteText}\n\n— ${author}${bookTitle ? ` (${bookTitle})` : ''}\n\nBilgeOkur ile paylaşıldı.`,
+        });
+      }
     } catch (error) {
       console.error(error);
+      Alert.alert("Hata", "Görsel paylaşılırken bir sorun oluştu.");
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -65,10 +83,13 @@ export const QuoteShareEditor: React.FC<QuoteShareEditorProps> = ({
 
     if (mode === 'glass') {
       return (
-        <View style={styles.previewContainer}>
+        <View style={styles.previewContainer} ref={cardRef} collapsable={false}>
           <LinearGradient colors={['#6366f1', '#a855f7', '#ec4899']} style={styles.decorationGradient} />
           <BlurView intensity={Platform.OS === 'ios' ? 40 : 80} tint={isDark ? "dark" : "light"} style={styles.glassCard}>
-            <Ionicons name="chatbox-ellipses-outline" size={32} color={colors.primary} style={{ marginBottom: SPACING.m, opacity: 0.5 }} />
+            <View style={styles.brandingRow}>
+              <Ionicons name="chatbox-ellipses-outline" size={24} color={colors.primary} style={{ opacity: 0.5 }} />
+              <Text style={[styles.brandingText, { color: colors.text }]}>BilgeOkur</Text>
+            </View>
             <Text style={textStyle}>{quoteText}</Text>
             <Text style={authorStyle}>— {author}</Text>
           </BlurView>
@@ -78,21 +99,29 @@ export const QuoteShareEditor: React.FC<QuoteShareEditorProps> = ({
 
     if (mode === 'gradient') {
       return (
-        <LinearGradient colors={['#4f46e5', '#7c3aed']} style={styles.previewContainer}>
-          <View style={styles.cardContent}>
-            <Ionicons name="chatbox-ellipses-outline" size={32} color="#FFF" style={{ marginBottom: SPACING.m, opacity: 0.5 }} />
-            <Text style={[textStyle, { color: '#FFF' }]}>{quoteText}</Text>
-            <Text style={[authorStyle, { color: 'rgba(255,255,255,0.7)' }]}>— {author}</Text>
-          </View>
-        </LinearGradient>
+        <View style={styles.previewContainer} ref={cardRef} collapsable={false}>
+          <LinearGradient colors={['#4f46e5', '#7c3aed']} style={StyleSheet.absoluteFill}>
+            <View style={styles.cardContent}>
+              <View style={styles.brandingRow}>
+                <Ionicons name="chatbox-ellipses-outline" size={24} color="#FFF" style={{ opacity: 0.5 }} />
+                <Text style={[styles.brandingText, { color: '#FFF' }]}>BilgeOkur</Text>
+              </View>
+              <Text style={[textStyle, { color: '#FFF' }]}>{quoteText}</Text>
+              <Text style={[authorStyle, { color: 'rgba(255,255,255,0.7)' }]}>— {author}</Text>
+            </View>
+          </LinearGradient>
+        </View>
       );
     }
 
     if (mode === 'neon') {
       return (
-        <View style={[styles.previewContainer, { backgroundColor: '#fef08a' }]}>
+        <View style={[styles.previewContainer, { backgroundColor: '#fef08a' }]} ref={cardRef} collapsable={false}>
           <View style={[styles.cardContent, { borderColor: '#000', borderWidth: 2, margin: 20 }]}>
-            <Ionicons name="chatbox-ellipses-outline" size={32} color="#000" style={{ marginBottom: SPACING.m }} />
+            <View style={styles.brandingRow}>
+              <Ionicons name="chatbox-ellipses-outline" size={24} color="#000" />
+              <Text style={[styles.brandingText, { color: '#000' }]}>BilgeOkur</Text>
+            </View>
             <Text style={textStyle}>{quoteText}</Text>
             <Text style={authorStyle}>— {author}</Text>
           </View>
@@ -101,9 +130,12 @@ export const QuoteShareEditor: React.FC<QuoteShareEditorProps> = ({
     }
 
     return (
-      <View style={[styles.previewContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.previewContainer, { backgroundColor: colors.background }]} ref={cardRef} collapsable={false}>
         <View style={styles.cardContent}>
-          <Ionicons name="chatbox-ellipses-outline" size={32} color={colors.primary} style={{ marginBottom: SPACING.m, opacity: 0.3 }} />
+          <View style={styles.brandingRow}>
+            <Ionicons name="chatbox-ellipses-outline" size={24} color={colors.primary} style={{ opacity: 0.3 }} />
+            <Text style={[styles.brandingText, { color: colors.text, opacity: 0.6 }]}>BilgeOkur</Text>
+          </View>
           <Text style={textStyle}>{quoteText}</Text>
           <Text style={authorStyle}>— {author}</Text>
         </View>
@@ -257,6 +289,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
+  },
+  brandingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+    gap: 8,
+  },
+  brandingText: {
+    fontFamily: FONTS.primary.bold,
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
   decorationGradient: {
     ...StyleSheet.absoluteFillObject,

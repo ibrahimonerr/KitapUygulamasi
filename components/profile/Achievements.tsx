@@ -5,12 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-const BADGES = [
-  { id: '1', icon: 'bonfire', label: '7 Gün Seri', color: '#FF4136' },
-  { id: '2', icon: 'moon', label: 'Gece Kuşu', color: '#B10DC9' },
-  { id: '3', icon: 'trophy', label: '500 Sayfa', color: '#FFD700' },
-  { id: '4', icon: 'library', label: 'Bilge', color: '#39CCCC' },
-];
+const BADGES: any[] = [];
 
 export default function Achievements() {
   const { colors } = useTheme();

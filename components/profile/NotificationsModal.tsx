@@ -28,48 +28,7 @@ interface Notification {
   color: string;
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'mentor',
-    title: 'Yeni Analiz Hazır!',
-    message: 'Bilge Mentor son okumalarını analiz etti. Ruhun için yeni önerileri var.',
-    time: '2sa önce',
-    isRead: false,
-    icon: 'sparkles',
-    color: '#FFD700',
-  },
-  {
-    id: '2',
-    type: 'badge',
-    title: 'Yeni Başarı: Gece Kuşu!',
-    message: 'Üst üste 3 gece saat 00:00\'dan sonra okuma yaptın. Bronz kupa kazandın!',
-    time: 'Dün',
-    isRead: false,
-    icon: 'trophy',
-    color: '#CD7F32',
-  },
-  {
-    id: '3',
-    type: 'club',
-    title: 'Tutunamayanlar Kulübü',
-    message: 'Selim Işık yeni bir bilgece soru sordu: "Siz hiç kendinizi aradınız mı?"',
-    time: '2 gün önce',
-    isRead: true,
-    icon: 'people',
-    color: '#007AFF',
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'Haftalık Hedef Hatırlatıcı',
-    message: 'Haftalık okuma hedefine ulaşmak için sadece 45 dakikan kaldı. Başarabilirsin!',
-    time: '3 gün önce',
-    isRead: true,
-    icon: 'time',
-    color: '#FF4136',
-  }
-];
+const MOCK_NOTIFICATIONS: Notification[] = [];
 
 interface Props {
   isVisible: boolean;

@@ -35,18 +35,40 @@ import { ReadingTimerModal } from '../../components/active/ReadingTimerModal';
 import { OptionsBubble } from '../../components/active/OptionsBubble';
 import { QuoteShareEditor } from '../../components/active/QuoteShareEditor';
 import { AIDiscussionPartner } from '../../components/active/AIDiscussionPartner';
+import ForYouSection from '../../components/active/ForYouSection';
+import { generateForYouContent, Recommendation } from '../../services/forYouService';
+import { useUser } from '../../store/UserContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ActiveTab() {
   const { colors, isDark } = useTheme();
-  const { activeBooks, addQuoteToBook, reorderActiveBooks, finishBook, addNoteToBook } = useLibrary();
+  const { activeBooks, addQuoteToBook, reorderActiveBooks, finishBook, addNoteToBook, resetDatabase } = useLibrary();
   const router = useRouter();
 
+  const handleReset = () => {
+    Alert.alert(
+      "Verileri Temizle",
+      "Tüm kitaplar, alıntılar ve kulüpler silinecek. Emin misin?",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        { 
+          text: "Evet, Temizle", 
+          style: "destructive",
+          onPress: async () => {
+            await resetDatabase();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            alert("Tüm veriler temizlendi.");
+          }
+        }
+      ]
+    );
+  };
+
   // State Management
-  const [readingMinutes, setReadingMinutes] = useState(15);
+  const [readingMinutes, setReadingMinutes] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(30);
-  const [streak, setStreak] = useState(12);
+  const [streak, setStreak] = useState(0);
   const [isGoalReached, setIsGoalReached] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [isGoalModalVisible, setIsGoalModalVisible] = useState(false);
@@ -70,6 +92,9 @@ export default function ActiveTab() {
   const [shareContent, setShareContent] = useState({ text: '', author: '' });
   const [isInterviewVisible, setIsInterviewVisible] = useState(false);
   const [finishedBookForInterview, setFinishedBookForInterview] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [isForYouLoading, setIsForYouLoading] = useState(false);
+  const { profile } = useUser();
   const timerRef = useRef<any>(null);
   const scrollY = useSharedValue(0);
 
@@ -109,6 +134,25 @@ export default function ActiveTab() {
     };
     fetchBriefing();
   }, [currentBook?.id]);
+
+  useEffect(() => {
+    fetchForYou();
+  }, [profile?.id, activeBooks.length]);
+
+  const fetchForYou = async () => {
+    if (activeBooks.length === 0 && !profile?.taste_profile) return;
+    
+    setIsForYouLoading(true);
+    try {
+      const recentTitles = activeBooks.slice(0, 3).map(b => b.title);
+      const data = await generateForYouContent(profile?.taste_profile || {}, recentTitles);
+      setRecommendations(data);
+    } catch (error) {
+      console.error("For You fetch error:", error);
+    } finally {
+      setIsForYouLoading(false);
+    }
+  };
 
   const toggleBriefing = () => {
     setIsBriefingExpanded(!isBriefingExpanded);
@@ -329,7 +373,12 @@ export default function ActiveTab() {
       />
 
       <Animated.View style={headerStyle}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Ana Sayfa</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Ana Sayfa</Text>
+          <TouchableOpacity onPress={handleReset} style={{ padding: 8 }}>
+            <Ionicons name="trash-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       <Animated.ScrollView
@@ -370,6 +419,12 @@ export default function ActiveTab() {
             briefingData={briefingData}
             colors={colors}
             isDark={isDark}
+          />
+
+          <ForYouSection 
+            recommendations={recommendations}
+            isLoading={isForYouLoading}
+            onRefresh={fetchForYou}
           />
 
           <QuotesFeed 

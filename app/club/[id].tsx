@@ -206,12 +206,12 @@ export default function ClubDetailScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>28</Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>0</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }]}>Alıntı</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>6</Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>0</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }]}>Tartışma</Text>
             </View>
           </View>

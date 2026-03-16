@@ -10,21 +10,7 @@ interface QuotesFeedProps {
   onShare?: (quote: string, author: string) => void;
 }
 
-const TASTE_QUOTES: Record<string, string> = {
-  "Oğuz Atay": "Kelimeler, albayım, bazı anlamlara gelmiyor.",
-  "Sabahattin Ali": "Dünyada bana 'ne istiyorsun?' diye sorsalar hiç düşünmeden 'huzur' derim.",
-  "Albert Camus": "Kışın en soğuk zamanında, içimde yenilmez bir yaz olduğunu öğrendim.",
-  "Franz Kafka": "Bir kitap, içimizdeki donmuş deniz için bir balta olmalıdır.",
-  "Dostoyevski": "İnsanın ruhunu yücelten acı, mutluluktan daha değerlidir.",
-  "Stefan Zweig": "Bir kez kendini bulan kişinin bu yeryüzünde yitirecek hiçbir şeyi yoktur.",
-  "Virginia Woolf": "Para kazanın, kendinize ait ayrı bir oda ve boş zaman yaratın. Ve yazın!",
-  "Marquez": "Anlatmak için yaşamak gerek.",
-  "Klasik": "Klasikler, insanların 'okuyorum' değil, genellikle 'yeniden okuyorum' dedikleri kitaplardır.",
-  "Felsefe": "Sorgulanmamış bir hayat, yaşanmaya değmez.",
-  "Psikoloji": "Zihin, kendi başına bir cennet ya da cehennem yaratabilir.",
-  "Edebiyat": "Edebiyat, hayatın eksik kalan yanlarını tamamlar.",
-  "Bilim Kurgu": "Gelecek, onu bugünden düşleyenlerin hayalleriyle şekillenir."
-};
+const TASTE_QUOTES: Record<string, string> = {};
 
 export const QuotesFeed: React.FC<QuotesFeedProps> = ({ colors, onShare }) => {
   const { taste } = useLibrary();
@@ -32,10 +18,7 @@ export const QuotesFeed: React.FC<QuotesFeedProps> = ({ colors, onShare }) => {
   const displayQuotes = useMemo(() => {
     const allTastes = [...taste.authors, ...taste.genres];
     if (allTastes.length === 0) {
-      return [
-        { text: "Okumak, zihnin en asil yolculuğudur.", author: "BilgeOkur", category: "Genel" },
-        { text: "Her kitap yeni bir dünyanın kapısıdır.", author: "BilgeOkur", category: "Genel" }
-      ];
+      return [];
     }
 
     return allTastes
