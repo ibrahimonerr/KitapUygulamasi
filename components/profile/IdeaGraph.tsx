@@ -1,5 +1,23 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { FONTS, SPACING } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
+import { useLibrary } from '../../store/LibraryContext';
+import * as Haptics from 'expo-haptics';
+import Animated, { 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence,
+  useSharedValue,
+  FadeIn,
+  FadeOut,
+  SlideInUp
+} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Line } from 'react-native-svg';
+import { generateIdeaGraphData, GraphNode, GraphLink } from '../../services/graphService';
 import { BlurView } from 'expo-blur';
 import { FONTS, SPACING } from '../../constants/theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -18,19 +36,19 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
+const GRAPH_HEIGHT = height * 0.6;
 
 import { analyzeContentWithAI } from '../../services/ai';
 
-const IdeaNode = ({ item, isSelected, onPress }: { item: any, isSelected: boolean, onPress: () => void }) => {
+const IdeaNode = ({ node, isSelected, onPress }: { node: GraphNode, isSelected: boolean, onPress: () => void }) => {
   const translateY = useSharedValue(0);
-  const scale = useSharedValue(1);
   const { colors } = useTheme();
   
   useEffect(() => {
     translateY.value = withRepeat(
       withSequence(
-        withTiming(-6, { duration: 3000 + Math.random() * 1000 }),
-        withTiming(6, { duration: 3000 + Math.random() * 1000 })
+        withTiming(-5, { duration: 3000 + Math.random() * 2000 }),
+        withTiming(5, { duration: 3000 + Math.random() * 2000 })
       ),
       -1,
       true
@@ -40,43 +58,42 @@ const IdeaNode = ({ item, isSelected, onPress }: { item: any, isSelected: boolea
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: translateY.value },
-      { scale: withTiming(isSelected ? 1.15 : scale.value) }
+      { scale: withTiming(isSelected ? 1.2 : 1) }
     ],
   }));
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress();
-  };
 
   return (
     <Animated.View 
       style={[
         styles.nodeContainer, 
-        { top: item.top, left: item.left },
+        { top: node.y, left: node.x },
         animatedStyle
       ]}
     >
       <TouchableOpacity 
         activeOpacity={0.9}
-        onPress={handlePress}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onPress();
+        }}
         style={[
           styles.nodeCapsule, 
           { 
-            backgroundColor: isSelected ? colors.primary : '#FFD700',
-            borderColor: isSelected ? '#FFF' : 'rgba(255,255,255,0.4)',
-            borderWidth: isSelected ? 2 : 1.5,
+            backgroundColor: isSelected ? colors.primary : colors.highlight,
+            borderColor: isSelected ? '#FFF' : colors.primary,
+            borderWidth: isSelected ? 2 : 1,
+            opacity: isSelected ? 1 : 0.8,
           }
         ]}
       >
         <Text style={[
           styles.nodeText, 
           { 
-            fontSize: 13 * (item.weight || 1),
-            color: isSelected ? '#FFF' : '#000'
+            fontSize: 12,
+            color: isSelected ? '#FFF' : colors.primary
           }
-        ]}>
-          {item.label}
+        ]} numberOfLines={2}>
+          {node.label}
         </Text>
       </TouchableOpacity>
     </Animated.View>
@@ -86,72 +103,86 @@ const IdeaNode = ({ item, isSelected, onPress }: { item: any, isSelected: boolea
 export default function IdeaGraph() {
   const { colors, isDark } = useTheme();
   const { activeBooks, finishedBooks } = useLibrary();
-  const [selectedIdea, setSelectedIdea] = useState<any>(null);
-  const [distilledIdeas, setDistilledIdeas] = useState<any[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [links, setLinks] = useState<GraphLink[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
   useEffect(() => {
-    performAnalysis();
-  }, [activeBooks, finishedBooks]);
+    loadGraphData();
+  }, [activeBooks.length, finishedBooks.length]);
 
-  const performAnalysis = async () => {
+  const loadGraphData = async () => {
     const allBooks = [...activeBooks, ...finishedBooks];
-    const combinedContent = allBooks.flatMap(b => [
-      ...b.quotes.map(q => q.text),
-      ...b.notes.map(n => n.text)
-    ]).join("\n");
+    const allNotes = allBooks.flatMap(b => b.notes.map(n => ({ ...n, bookTitle: b.title })));
+    const allQuotes = allBooks.flatMap(b => b.quotes.map(q => ({ ...q, bookTitle: b.title })));
 
-    if (!combinedContent) {
-      setDistilledIdeas([]);
-      return;
+    if (allNotes.length === 0 && allQuotes.length === 0) return;
+
+    setIsLoading(true);
+    try {
+      const { nodes: rawNodes, links: rawLinks } = await generateIdeaGraphData(allNotes, allQuotes);
+      
+      // Position nodes randomly but within bounds
+      const positionedNodes = rawNodes.map((node, i) => ({
+        ...node,
+        x: 40 + (Math.random() * (width - 150)),
+        y: 40 + (Math.random() * (GRAPH_HEIGHT - 100))
+      }));
+
+      setNodes(positionedNodes);
+      setLinks(rawLinks);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsAnalyzing(true);
-    const results = await analyzeContentWithAI(combinedContent);
-    
-    const mappedResults = results.map((result: any, index: number) => {
-      // Find related content from your library for this theme
-      const relatedContent = allBooks.flatMap(b => [
-        ...b.quotes.map(q => ({ text: q.text, book: b.title })),
-        ...b.notes.map(n => ({ text: n.text, book: b.title }))
-      ]).filter(c => 
-        result.label.toLowerCase().split(' ').some((word: string) => 
-          word.length > 3 && c.text.toLowerCase().includes(word)
-        )
-      );
-
-      return {
-        ...result,
-        content: relatedContent,
-        top: 40 + (index * 85) % (height * 0.5),
-        left: 20 + (index * 130) % (width - 160)
-      };
-    });
-
-    setDistilledIdeas(mappedResults);
-    setIsAnalyzing(false);
   };
+
+  const getSourceNode = (id: string) => nodes.find(n => n.id === id);
+  const getTargetNode = (id: string) => nodes.find(n => n.id === id);
 
   return (
     <View style={styles.container}>
-      <View style={styles.graphArea}>
-        {isAnalyzing && (
-          <Animated.View entering={FadeIn} style={styles.loadingContainer}>
-            <Ionicons name="sparkles" size={40} color={colors.primary} />
-            <Text style={[styles.loadingText, { color: colors.text }]}>Zihin Haritan Analiz Ediliyor...</Text>
-          </Animated.View>
+      <View style={[styles.graphArea, { height: GRAPH_HEIGHT }]}>
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator color={colors.primary} size="large" />
+            <Text style={[styles.loadingText, { color: colors.text }]}>Fikirlerin Bağlanıyor...</Text>
+          </View>
         )}
 
-        {!isAnalyzing && distilledIdeas.map(item => (
+        <Svg style={StyleSheet.absoluteFill}>
+          {links.map((link, i) => {
+            const source = getSourceNode(link.source);
+            const target = getTargetNode(link.target);
+            if (!source || !target) return null;
+            
+            return (
+              <Line
+                key={i}
+                x1={source.x! + 40}
+                y1={source.y! + 20}
+                x2={target.x! + 40}
+                y2={target.y! + 20}
+                stroke={colors.primary}
+                strokeWidth={link.weight * 2}
+                opacity={0.3}
+              />
+            );
+          })}
+        </Svg>
+
+        {nodes.map(node => (
           <IdeaNode 
-            key={item.id || item.label} 
-            item={item} 
-            isSelected={selectedIdea?.id === item.id}
-            onPress={() => setSelectedIdea(item.id === selectedIdea?.id ? null : item)}
+            key={node.id}
+            node={node}
+            isSelected={selectedNode?.id === node.id}
+            onPress={() => setSelectedNode(node)}
           />
         ))}
 
-        {selectedIdea && (
+        {selectedNode && (
           <Animated.View 
             entering={SlideInUp.duration(400)}
             exiting={FadeOut}
@@ -160,44 +191,37 @@ export default function IdeaGraph() {
             <BlurView intensity={95} tint={isDark ? 'dark' : 'light'} style={styles.detailBlur}>
               <View style={styles.detailHeader}>
                 <View style={[styles.detailBadge, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="sparkles" size={14} color="#FFF" />
-                  <Text style={styles.detailBadgeText}>FİKİR ANALİZİ</Text>
+                  <Ionicons name="bulb-outline" size={14} color="#FFF" />
+                  <Text style={styles.detailBadgeText}>SEÇİLİ FİKİR</Text>
                 </View>
-                <TouchableOpacity onPress={() => setSelectedIdea(null)}>
+                <TouchableOpacity onPress={() => setSelectedNode(null)}>
                   <Ionicons name="close-circle" size={28} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
 
-              <Text style={[styles.detailTitle, { color: colors.text }]}>{selectedIdea.label}</Text>
-              <Text style={[styles.detailDescription, { color: colors.textMuted }]}>{selectedIdea.description}</Text>
+              <Text style={[styles.detailTitle, { color: colors.text }]} numberOfLines={3}>
+                {selectedNode.label}
+              </Text>
               
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               
-              <Text style={[styles.relatedTitle, { color: colors.text }]}>İlgili Alıntılar & Notlar</Text>
-              <ScrollView showsVerticalScrollIndicator={false} style={styles.quoteScroll}>
-                {selectedIdea.content.length > 0 ? (
-                  selectedIdea.content.map((item: any, i: number) => (
-                    <View key={i} style={[styles.quoteItem, { borderLeftColor: colors.primary }]}>
-                      <Text style={[styles.quoteText, { color: colors.text }]}>"{item.text}"</Text>
-                      <Text style={[styles.quoteBook, { color: colors.textMuted }]}>{item.book}</Text>
+              <Text style={[styles.relatedTitle, { color: colors.text }]}>Anlamsal Bağlar</Text>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {links.filter(l => l.source === selectedNode.id || l.target === selectedNode.id).map((link, i) => {
+                  const otherId = link.source === selectedNode.id ? link.target : link.source;
+                  const otherNode = nodes.find(n => n.id === otherId);
+                  return (
+                    <View key={i} style={[styles.linkItem, { borderColor: colors.border }]}>
+                      <Text style={[styles.linkLabel, { color: colors.primary }]}>{link.label}</Text>
+                      <Text style={[styles.linkTarget, { color: colors.textMuted }]} numberOfLines={2}>
+                        {otherNode?.label}
+                      </Text>
                     </View>
-                  ))
-                ) : (
-                  <Text style={[styles.noContentText, { color: colors.textMuted }]}>
-                    Bu tema henüz zihninde filizleniyor. Okumaya devam ettikçe burası dolacak.
-                  </Text>
-                )}
+                  );
+                })}
               </ScrollView>
             </BlurView>
           </Animated.View>
-        )}
-        
-        {distilledIdeas.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-              Analiz edilebilecek kadar fikir birikmedi. Biraz daha okumaya ne dersin?
-            </Text>
-          </View>
         )}
       </View>
     </View>
@@ -224,15 +248,38 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   nodeCapsule: {
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    maxWidth: 140,
   },
   nodeText: {
     fontFamily: FONTS.primary.bold,
     textAlign: 'center',
+    fontSize: 11,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  linkItem: {
+    padding: SPACING.m,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: SPACING.s,
+  },
+  linkLabel: {
+    fontFamily: FONTS.primary.bold,
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  linkTarget: {
+    fontFamily: FONTS.primary.regular,
+    fontSize: 12,
   },
   detailCard: {
     position: 'absolute',
