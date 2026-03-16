@@ -8,8 +8,8 @@ export default class Note extends Model {
     books: { type: 'belongs_to', key: 'book_id' },
   };
 
-  @field('content') declare content: string;
+  @field('content') content!: string;
   
-  @readonly @date('created_at') declare createdAt: Date;
-  @immutableRelation('books', 'book_id') declare book: Relation<any>;
+  @readonly @date('created_at') createdAt!: Date;
+  @immutableRelation('books', 'book_id') book!: Relation<any>;
 }

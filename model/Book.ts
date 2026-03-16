@@ -9,18 +9,18 @@ export default class Book extends Model {
     notes: { type: 'has_many', foreignKey: 'book_id' },
   };
 
-  @field('title') declare title: string;
-  @field('author') declare author: string;
-  @field('cover') declare cover: string;
-  @field('status') declare status: string;
-  @field('progress') declare progress: number;
-  @field('pages') declare pages: string;
-  @field('rating') declare rating?: number;
-  @field('summary') declare summary?: string;
+  @field('title') title!: string;
+  @field('author') author!: string;
+  @field('cover') cover!: string;
+  @field('status') status!: string;
+  @field('progress') progress!: number;
+  @field('pages') pages!: string;
+  @field('rating') rating?: number;
+  @field('summary') summary?: string;
   
-  @readonly @date('created_at') declare createdAt: Date;
-  @readonly @date('updated_at') declare updatedAt: Date;
+  @readonly @date('created_at') createdAt!: Date;
+  @readonly @date('updated_at') updatedAt!: Date;
 
-  @children('quotes') declare quotes: any;
-  @children('notes') declare notes: any;
+  @children('quotes') quotes!: any;
+  @children('notes') notes!: any;
 }

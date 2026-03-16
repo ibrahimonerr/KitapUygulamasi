@@ -8,9 +8,9 @@ export default class Quote extends Model {
     books: { type: 'belongs_to', key: 'book_id' },
   };
 
-  @field('text') declare text: string;
-  @field('page') declare page?: number;
+  @field('text') text!: string;
+  @field('page') page?: number;
   
-  @readonly @date('created_at') declare createdAt: Date;
-  @immutableRelation('books', 'book_id') declare book: Relation<any>;
+  @readonly @date('created_at') createdAt!: Date;
+  @immutableRelation('books', 'book_id') book!: Relation<any>;
 }
