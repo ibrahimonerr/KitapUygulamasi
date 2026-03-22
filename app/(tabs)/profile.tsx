@@ -26,6 +26,7 @@ import EditProfileModal from '../../components/profile/EditProfileModal';
 import SettingsModal from '../../components/profile/SettingsModal';
 import NotificationsModal from '../../components/profile/NotificationsModal';
 import { useUser } from '../../store/UserContext';
+import { useLibrary } from '../../store/LibraryContext';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +34,7 @@ export default function ProfileTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { profile, isLoading } = useUser();
+  const { activeBooks, finishedBooks, waitlistBooks } = useLibrary();
   const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = React.useState(false);
   const [isNotifModalVisible, setIsNotifModalVisible] = React.useState(false);
@@ -46,7 +48,10 @@ export default function ProfileTab() {
   }
 
   const isGuest = profile?.id === 'guest';
-  
+  const totalBooks = activeBooks.length + finishedBooks.length + waitlistBooks.length;
+  const totalNotes = [...activeBooks, ...finishedBooks, ...waitlistBooks].reduce((sum, book) => sum + book.notes.length, 0);
+  const totalQuotes = [...activeBooks, ...finishedBooks, ...waitlistBooks].reduce((sum, book) => sum + book.quotes.length, 0);
+
   const scrollY = useSharedValue(0);
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -157,17 +162,17 @@ export default function ProfileTab() {
 
         <View style={styles.statsRow}>
           <View style={[styles.statItem]}>
-            <Text style={[styles.statValue, { color: colors.text }]}>12</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{totalBooks}</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Kitap</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={[styles.statItem]}>
-            <Text style={[styles.statValue, { color: colors.text }]}>450</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{totalNotes}</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Not</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={[styles.statItem]}>
-            <Text style={[styles.statValue, { color: colors.text }]}>128</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{totalQuotes}</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Alıntı</Text>
           </View>
         </View>

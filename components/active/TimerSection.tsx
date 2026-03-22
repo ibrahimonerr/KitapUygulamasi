@@ -79,25 +79,25 @@ export const TimerSection: React.FC<TimerSectionProps> = ({
             dashedStrokeConfig={{ count: 40, width: 3 }}
             showProgressValue={false}
           />
-          <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }]}>
+          <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', pointerEvents: 'none', zIndex: 5 }]}>
             <Text style={{ 
               fontFamily: FONTS.primary.regular, 
               fontSize: 13, 
-              color: colors.textMuted,
+              color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)',
               marginBottom: 2
             }}>Bugün Okunan</Text>
             
             <Text style={{ 
               fontFamily: FONTS.primary.bold, 
               fontSize: 56, 
-              color: colors.text,
+              color: isDark ? '#FFFFFF' : '#1A1A1A',
               lineHeight: 64
             }}>{readingMinutes}'</Text>
             
             <Text style={{ 
               fontFamily: FONTS.primary.semiBold, 
               fontSize: 14, 
-              color: colors.textMuted,
+              color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)',
               marginTop: 2
             }}>Hedef: {dailyGoal} dk</Text>
           </View>

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Modal, Dimensions, Platform } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { FONTS, SPACING } from '../../constants/theme';
 import * as Haptics from 'expo-haptics';
+import { getBookByISBN, toLibraryBookInput } from '../../services/bookSearch';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface ISBNSyncProps {
   isVisible: boolean;
@@ -16,13 +17,7 @@ interface ISBNSyncProps {
   isDark: boolean;
 }
 
-export const ISBNSync: React.FC<ISBNSyncProps> = ({
-  isVisible,
-  onClose,
-  onBookFound,
-  colors,
-  isDark
-}) => {
+export const ISBNSync: React.FC<ISBNSyncProps> = ({ isVisible, onClose, onBookFound, colors }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,42 +26,33 @@ export const ISBNSync: React.FC<ISBNSyncProps> = ({
     if (isVisible && !permission?.granted) {
       requestPermission();
     }
-  }, [isVisible]);
+  }, [isVisible, permission?.granted, requestPermission]);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned || isLoading) return;
-    
+
     setScanned(true);
     setIsLoading(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     try {
-      // Fetch from Google Books API
-      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${data}`);
-      const json = await response.json();
+      const book = await getBookByISBN(data);
 
-      if (json.totalItems > 0) {
-        const book = json.items[0].volumeInfo;
-        const processedBook = {
-          id: data,
-          title: book.title,
-          author: book.authors ? book.authors[0] : 'Unknown Author',
-          cover: book.imageLinks ? book.imageLinks.thumbnail.replace('http:', 'https:') : 'https://images.unsplash.com/photo-1543004086-c28c4779d20c?q=80&w=1000&auto=format&fit=crop',
-          pages: book.pageCount || 0,
-          description: book.description || '',
+      if (book) {
+        onBookFound({
+          ...toLibraryBookInput(book),
           progress: 0,
           notes: [],
-          quotes: []
-        };
-        onBookFound(processedBook);
+          quotes: [],
+        });
         onClose();
       } else {
-        alert("Kitap bulunamadı. Lütfen tekrar deneyin veya manuel ekleyin.");
+        alert('Kitap bulunamadı. Lütfen tekrar deneyin veya manuel ekleyin.');
         setScanned(false);
       }
     } catch (error) {
       console.error(error);
-      alert("Bir hata oluştu. Lütfen bağlantınızı kontrol edin.");
+      alert('Bir hata oluştu. Lütfen bağlantınızı kontrol edin.');
       setScanned(false);
     } finally {
       setIsLoading(false);
@@ -82,10 +68,7 @@ export const ISBNSync: React.FC<ISBNSyncProps> = ({
           <View style={[styles.permissionContainer, { backgroundColor: colors.background }]}>
             <Ionicons name="camera-outline" size={64} color={colors.primary} />
             <Text style={[styles.permissionText, { color: colors.text }]}>Kameraya erişim izni gerekiyor</Text>
-            <TouchableOpacity 
-              style={[styles.permissionButton, { backgroundColor: colors.primary }]}
-              onPress={requestPermission}
-            >
+            <TouchableOpacity style={[styles.permissionButton, { backgroundColor: colors.primary }]} onPress={requestPermission}>
               <Text style={styles.permissionButtonText}>İzin Ver</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}>
@@ -97,7 +80,7 @@ export const ISBNSync: React.FC<ISBNSyncProps> = ({
             style={StyleSheet.absoluteFillObject}
             onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
             barcodeScannerSettings={{
-              barcodeTypes: ["ean13", "ean8", "upc_a"],
+              barcodeTypes: ['ean13', 'ean8', 'upc_a'],
             }}
           >
             <View style={styles.overlay}>
@@ -116,13 +99,13 @@ export const ISBNSync: React.FC<ISBNSyncProps> = ({
                 <Text style={styles.helperText}>Kitap barkodunu çerçevenin içine hizala</Text>
               </View>
 
-              {isLoading && (
+              {isLoading ? (
                 <View style={styles.loadingOverlay}>
                   <BlurView intensity={80} tint="dark" style={styles.loadingCard}>
-                    <Text style={styles.loadingText}>Kitap Aranıyor...</Text>
+                    <Text style={styles.loadingText}>Kitap aranıyor...</Text>
                   </BlurView>
                 </View>
-              )}
+              ) : null}
             </View>
           </CameraView>
         )}

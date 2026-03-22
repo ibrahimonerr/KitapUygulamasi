@@ -9,9 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ibrahimoner.bilgeokur",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Alıntı resimlerini veya karekodları tarayabilmemiz için kamera erişimi gereklidir."
+      }
     },
     "android": {
+      "package": "com.ibrahimoner.bilgeokur",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

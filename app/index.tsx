@@ -1,44 +1,54 @@
 import { Redirect, useRouter } from 'expo-router';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown, FadeInUp, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useEffect } from 'react';
 import { FONTS, SPACING } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '../store/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Index() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const isLoggedIn = false;
+  const { user, isLoading } = useAuth();
 
-  const blob1Opactiy = useSharedValue(0.4);
-  const blob2Opactiy = useSharedValue(0.3);
+  const blob1Opacity = useSharedValue(0.4);
+  const blob2Opacity = useSharedValue(0.3);
 
   useEffect(() => {
-    blob1Opactiy.value = withRepeat(
+    blob1Opacity.value = withRepeat(
       withSequence(withTiming(0.6, { duration: 4000 }), withTiming(0.3, { duration: 4000 })),
       -1,
       true
     );
-    blob2Opactiy.value = withRepeat(
+    blob2Opacity.value = withRepeat(
       withSequence(withTiming(0.5, { duration: 5000 }), withTiming(0.2, { duration: 5000 })),
       -1,
       true
     );
-  }, []);
+  }, [blob1Opacity, blob2Opacity]);
 
   const animatedStyle1 = useAnimatedStyle(() => ({
-    opacity: blob1Opactiy.value,
+    opacity: blob1Opacity.value,
   }));
 
   const animatedStyle2 = useAnimatedStyle(() => ({
-    opacity: blob2Opactiy.value,
+    opacity: blob2Opacity.value,
   }));
 
-  if (isLoggedIn) {
+  if (!isLoading && user) {
     return <Redirect href="/(tabs)/active" />;
   }
 
@@ -51,54 +61,65 @@ export default function Index() {
         />
       </View>
 
-      <Animated.View style={[
-        styles.blob1, 
-        animatedStyle1, 
-        { backgroundColor: isDark ? colors.primary : 'rgba(94, 156, 255, 0.3)' }
-      ]} />
-      <Animated.View style={[
-        styles.blob2, 
-        animatedStyle2, 
-        { backgroundColor: isDark ? '#8a2be2' : 'rgba(138, 43, 226, 0.2)' }
-      ]} />
+      <Animated.View
+        style={[
+          styles.blob1,
+          animatedStyle1,
+          { backgroundColor: isDark ? colors.primary : 'rgba(94, 156, 255, 0.3)' },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.blob2,
+          animatedStyle2,
+          { backgroundColor: isDark ? '#8a2be2' : 'rgba(138, 43, 226, 0.2)' },
+        ]}
+      />
 
       <View style={styles.content}>
-        <Animated.View 
-          entering={FadeIn.duration(1200)}
-          style={styles.logoContainer}
-        >
+        <Animated.View entering={FadeIn.duration(1200)} style={styles.logoContainer}>
           <Animated.View
             entering={FadeInDown.delay(300).duration(1000).springify()}
             style={[styles.logoBlurWrapper, { borderColor: colors.border }]}
           >
-            <BlurView intensity={25} tint={isDark ? "light" : "dark"} style={styles.logoBlur}>
-               <Text style={[styles.title, { color: colors.text }]}>Bilge<Text style={{color: colors.primary}}>Okur</Text></Text>
+            <BlurView intensity={25} tint={isDark ? 'light' : 'dark'} style={styles.logoBlur}>
+              <Text style={[styles.title, { color: colors.text }]}>
+                Bilge<Text style={{ color: colors.primary }}>Okur</Text>
+              </Text>
             </BlurView>
           </Animated.View>
         </Animated.View>
 
         <Animated.View entering={FadeIn.delay(800).duration(1000)} style={styles.taglineContainer}>
-          <Text style={[styles.tagline, { color: colors.textMuted }]}>
-            Kitaplar sadece okunmaz,{'\n'}yaşanır.
-          </Text>
+          <Text style={[styles.tagline, { color: colors.textMuted }]}>Kitaplar sadece okunmaz,{`\n`}yaşanır.</Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInUp.delay(1200).duration(1000).springify()} style={styles.buttonWrapper}>
-          <TouchableOpacity 
-             activeOpacity={0.8}
-             onPress={() => router.push('/(auth)/login')}
-             style={styles.button}
-          >
-             <LinearGradient
-               colors={isDark ? ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.02)'] : ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.02)']}
-               style={[styles.buttonGradient, { borderColor: colors.border }]}
-             >
-               <BlurView intensity={30} tint={isDark ? "light" : "dark"} style={styles.buttonBlur}>
-                  <Text style={[styles.buttonText, { color: colors.text }]}>Yolculuğa Başla</Text>
-               </BlurView>
-             </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+        {isLoading ? (
+          <View style={styles.loadingWrapper}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        ) : (
+          <Animated.View entering={FadeInUp.delay(1200).duration(1000).springify()} style={styles.buttonWrapper}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => router.push('/(auth)/login')}
+              style={styles.button}
+            >
+              <LinearGradient
+                colors={
+                  isDark
+                    ? ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.02)']
+                    : ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.02)']
+                }
+                style={[styles.buttonGradient, { borderColor: colors.border }]}
+              >
+                <BlurView intensity={30} tint={isDark ? 'light' : 'dark'} style={styles.buttonBlur}>
+                  <Text style={[styles.buttonText, { color: colors.text }]}>Giriş Yap veya Misafir Devam Et</Text>
+                </BlurView>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
       </View>
     </View>
   );
@@ -160,6 +181,10 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     letterSpacing: 0.5,
   },
+  loadingWrapper: {
+    position: 'absolute',
+    bottom: height * 0.12,
+  },
   buttonWrapper: {
     width: '100%',
     paddingHorizontal: SPACING.xl,
@@ -182,6 +207,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontFamily: FONTS.primary.semiBold,
     fontSize: 18,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
 });

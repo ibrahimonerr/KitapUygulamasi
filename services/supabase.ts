@@ -1,4 +1,6 @@
 import 'react-native-url-polyfill/auto';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -8,32 +10,68 @@ console.log('Supabase Configuration Check:');
 console.log('- URL defined:', !!supabaseUrl);
 console.log('- Key defined:', !!supabaseAnonKey);
 
+const createWebStorageAdapter = () => {
+  const getStorage = () => {
+    if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) {
+      return null;
+    }
+
+    return globalThis.localStorage;
+  };
+
+  return {
+    getItem: async (key: string) => getStorage()?.getItem(key) ?? null,
+    setItem: async (key: string, value: string) => {
+      getStorage()?.setItem(key, value);
+    },
+    removeItem: async (key: string) => {
+      getStorage()?.removeItem(key);
+    },
+  };
+};
+
+const authStorage = Platform.OS === 'web' ? createWebStorageAdapter() : AsyncStorage;
+
 let supabaseClient: any;
 
 try {
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('CRITICAL: Supabase environment variables are missing!');
-    // We create a dummy client to prevent top-level extraction crashes
-    // If we throw here, the whole app might not load.
     supabaseClient = {
       auth: {
-        signUp: () => Promise.reject(new Error("Supabase konfigürasyonu eksik (ENV variables missing)")),
-        signInWithPassword: () => Promise.reject(new Error("Supabase konfigürasyonu eksik (ENV variables missing)")),
+        signUp: () => Promise.reject(new Error('Supabase konfigürasyonu eksik (ENV variables missing)')),
+        signInWithPassword: () => Promise.reject(new Error('Supabase konfigürasyonu eksik (ENV variables missing)')),
+        signInWithOAuth: () => Promise.reject(new Error('Supabase konfigürasyonu eksik (ENV variables missing)')),
         getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        setSession: () => Promise.reject(new Error('Supabase konfigürasyonu eksik (ENV variables missing)')),
+        exchangeCodeForSession: () => Promise.reject(new Error('Supabase konfigürasyonu eksik (ENV variables missing)')),
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signOut: () => Promise.resolve(),
       },
       from: () => ({
         select: () => ({
           eq: () => ({
-            single: () => Promise.resolve({ data: null, error: new Error("Config missing") }),
-            limit: () => Promise.resolve({ data: null, error: new Error("Config missing") }),
+            single: () => Promise.resolve({ data: null, error: new Error('Config missing') }),
+            limit: () => Promise.resolve({ data: null, error: new Error('Config missing') }),
           }),
-          limit: () => Promise.resolve({ data: null, error: new Error("Config missing") }),
+          in: () => Promise.resolve({ data: null, error: new Error('Config missing') }),
+          limit: () => Promise.resolve({ data: null, error: new Error('Config missing') }),
         }),
+        insert: () => Promise.resolve({ data: null, error: new Error('Config missing') }),
+        update: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('Config missing') }) }),
+        delete: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('Config missing') }) }) }),
+        upsert: () => Promise.resolve({ data: null, error: new Error('Config missing') }),
       }),
     };
   } else {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: authStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
   }
 } catch (e) {
   console.error('Supabase Initialization Exception:', e);
@@ -41,11 +79,10 @@ try {
 
 export const supabase = supabaseClient;
 
-// Diagnostic: Ping Supabase to verify connectivity
 const testConnection = async () => {
   if (!supabaseUrl) return;
   try {
-    const { data, error } = await supabase.from('profiles').select('id').limit(1);
+    const { error } = await supabase.from('profiles').select('id').limit(1);
     if (error) {
       console.warn('Supabase Connection Test (Profiles):', error.message);
     } else {
@@ -55,11 +92,9 @@ const testConnection = async () => {
     console.error('Supabase Connection Test EXCEPTION:', err);
   }
 };
+
 testConnection();
 
-/**
- * AI Brifinglerini getiren/kaydeden yardımcılar
- */
 export const getCachedBriefing = async (bookTitle: string, author: string, contextHash: string) => {
   try {
     const { data, error } = await supabase
@@ -82,13 +117,16 @@ export const saveBriefingToCache = async (bookTitle: string, author: string, con
   try {
     const { error } = await supabase
       .from('ai_briefings')
-      .upsert({
-        book_title: bookTitle,
-        author: author,
-        user_context_hash: contextHash,
-        briefing_json: briefing,
-        created_at: new Date().toISOString()
-      }, { onConflict: 'book_title,author,user_context_hash' });
+      .upsert(
+        {
+          book_title: bookTitle,
+          author,
+          user_context_hash: contextHash,
+          briefing_json: briefing,
+          created_at: new Date().toISOString(),
+        },
+        { onConflict: 'book_title,author,user_context_hash' }
+      );
 
     if (error) console.error('Supabase save cache error:', error);
   } catch (error) {

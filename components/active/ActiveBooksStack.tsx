@@ -74,11 +74,11 @@ export const ActiveBooksStack: React.FC<ActiveBooksStackProps> = ({
                       
                       <View style={styles.progressContainer}>
                         <View style={[styles.progressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                          <View style={[styles.progressBarFill, { width: `${book.progress * 100}%`, backgroundColor: colors.primary }]} />
+                          <View style={[styles.progressBarFill, { width: `${book.progress}%`, backgroundColor: colors.primary }]} />
                         </View>
                         <View style={styles.progressBadgeRow}>
                           <Text style={[styles.progressText, { color: colors.textMuted }]}>
-                            %{Math.round(book.progress * 100)} Tamamlandı
+                            %{Math.round(book.progress)} Tamamlandı
                           </Text>
                           <Ionicons name="bookmark" size={12} color={colors.primary} />
                         </View>

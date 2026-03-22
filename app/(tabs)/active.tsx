@@ -451,6 +451,7 @@ export default function ActiveTab() {
       <ReadingTimerModal
         isReading={isReading}
         currentBookTitle={currentBookTitle}
+        currentBookCoverUrl={currentBook?.cover}
         activeSeconds={activeSeconds}
         formatTime={formatTime}
         isPaused={isPaused}

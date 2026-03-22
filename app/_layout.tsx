@@ -12,6 +12,12 @@ import { UserProvider } from '../store/UserContext';
 import { AuthProvider } from '../store/AuthContext';
 import { SocialProvider } from '../store/SocialContext';
 
+if (!__DEV__) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+}
+
 function RootLayoutContent() {
   const { colors, isDark } = useTheme();
   const [fontsLoaded] = useFonts({

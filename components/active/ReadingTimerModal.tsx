@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInDown, FadeIn, FadeInUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { getColors } from 'react-native-image-colors';
 import { FONTS, SPACING } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -11,6 +12,7 @@ const { width } = Dimensions.get('window');
 interface ReadingTimerModalProps {
   isReading: boolean;
   currentBookTitle: string;
+  currentBookCoverUrl?: string;
   activeSeconds: number;
   formatTime: (seconds: number) => string;
   isPaused: boolean;
@@ -34,6 +36,7 @@ interface ReadingTimerModalProps {
 export const ReadingTimerModal: React.FC<ReadingTimerModalProps> = ({
   isReading,
   currentBookTitle,
+  currentBookCoverUrl,
   activeSeconds,
   formatTime,
   isPaused,
@@ -53,162 +56,175 @@ export const ReadingTimerModal: React.FC<ReadingTimerModalProps> = ({
   colors,
   isDark
 }) => {
+  const [ambientColor, setAmbientColor] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isReading && currentBookCoverUrl) {
+      getColors(currentBookCoverUrl, {
+        fallback: colors.primary,
+        cache: true,
+        key: currentBookCoverUrl,
+      }).then(res => {
+        if (res.platform === 'android') {
+          setAmbientColor(res.dominant || colors.primary);
+        } else if (res.platform === 'ios') {
+          setAmbientColor(res.background || colors.primary);
+        } else {
+          setAmbientColor(colors.primary);
+        }
+      }).catch(err => console.log('Color extraction error:', err));
+    }
+  }, [isReading, currentBookCoverUrl, colors.primary]);
+
   return (
     <Modal visible={isReading} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill}>
-          <SafeAreaView style={styles.modalContent}>
-            <Animated.View entering={FadeInDown} style={styles.timerHeader}>
-              <Text style={[styles.timerTitle, { color: colors.text }]}>Odak Modu</Text>
-              <Text style={[styles.timerBookTitle, { color: colors.textMuted }]}>{currentBookTitle}</Text>
+      <View style={[styles.modalOverlay, ambientColor ? { backgroundColor: ambientColor } : undefined]}>
+        <BlurView intensity={isDark ? 85 : 95} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+        
+        <SafeAreaView style={styles.modalContent} pointerEvents="box-none">
+          <Animated.View entering={FadeInDown.springify().damping(15)} style={styles.timerHeader}>
+            <Text style={[styles.timerTitle, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>Odak Modu</Text>
+            <Text style={[styles.timerBookTitle, { color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }]}>{currentBookTitle}</Text>
+          </Animated.View>
+
+          <View style={styles.centerContentWrapper} pointerEvents="box-none">
+            <Animated.View entering={FadeIn.delay(200)} style={styles.timerDisplay}>
+              <View style={styles.timerWrapper}>
+                <Text style={[styles.timerNumber, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>{formatTime(activeSeconds)}</Text>
+                <TouchableOpacity style={styles.pauseButtonMini} onPress={onTogglePause}>
+                  <Ionicons name={isPaused ? "play" : "pause"} size={14} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.timerUnit, { color: colors.primary }]}>
+                {isPaused ? 'Zaman Durduruldu' : 'Süreniz Akıyor'}
+              </Text>
             </Animated.View>
 
-            <View style={styles.centerContentWrapper}>
-              <Animated.View entering={FadeIn.delay(200)} style={styles.timerDisplay}>
-                <View style={styles.timerWrapper}>
-                  <Text style={[styles.timerNumber, { color: colors.text }]}>{formatTime(activeSeconds)}</Text>
-                  <TouchableOpacity style={styles.pauseButtonMini} onPress={onTogglePause}>
-                    <Ionicons name={isPaused ? "play" : "pause"} size={14} color={colors.primary} />
+            <Animated.View entering={FadeInUp.delay(350).springify().damping(15)} style={styles.musicController}>
+              <BlurView intensity={20} tint={isDark ? "light" : "dark"} style={StyleSheet.absoluteFill} />
+              <View style={styles.musicBlur}>
+                <View style={styles.musicTopRow}>
+                  <View style={styles.musicInfo}>
+                    <Text style={[styles.musicTrackTitle, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]} numberOfLines={1}>{currentTrack.title}</Text>
+                    <Text style={[styles.musicArtistName, { color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }]} numberOfLines={1}>{currentTrack.artist}</Text>
+                  </View>
+                  <Ionicons name="musical-notes" size={16} color={colors.primary} />
+                </View>
+
+                <View style={styles.musicMainControls}>
+                  <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
+                    <Ionicons name="play-back" size={24} color={isDark ? '#FFFFFF' : '#1A1A1A'} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.musicPlayPause, { backgroundColor: colors.primary }]}
+                    onPress={onToggleMusic}
+                  >
+                    <Ionicons name={isPlayingMusic ? "pause" : "play"} size={24} color="#FFF" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
+                    <Ionicons name="play-forward" size={24} color={isDark ? '#FFFFFF' : '#1A1A1A'} />
                   </TouchableOpacity>
                 </View>
-                <Text style={[styles.timerUnit, { color: colors.primary }]}>
-                  {isPaused ? 'Zaman Durduruldu' : 'Süreniz Akıyor'}
-                </Text>
-              </Animated.View>
 
-              {/* Music Controls Panel */}
-              <Animated.View entering={FadeInUp.delay(350)} style={styles.musicController}>
-                <BlurView intensity={20} tint={isDark ? "light" : "dark"} style={styles.musicBlur}>
-                  <View style={styles.musicTopRow}>
-                    <View style={styles.musicInfo}>
-                      <Text style={[styles.musicTrackTitle, { color: colors.text }]} numberOfLines={1}>{currentTrack.title}</Text>
-                      <Text style={[styles.musicArtistName, { color: colors.textMuted }]} numberOfLines={1}>{currentTrack.artist}</Text>
-                    </View>
-                    <Ionicons name="musical-notes" size={16} color={colors.primary} />
+                <View style={styles.musicProgressBarContainer}>
+                  <View style={[styles.musicProgressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                    <View style={[styles.musicProgressBarFill, { width: `${currentTrack.progress * 100}%`, backgroundColor: colors.primary }]} />
                   </View>
-
-                  <View style={styles.musicMainControls}>
-                    <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
-                      <Ionicons name="play-back" size={24} color={colors.text} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[styles.musicPlayPause, { backgroundColor: colors.primary }]}
-                      onPress={onToggleMusic}
-                    >
-                      <Ionicons name={isPlayingMusic ? "pause" : "play"} size={24} color="#FFF" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
-                      <Ionicons name="play-forward" size={24} color={colors.text} />
-                    </TouchableOpacity>
+                  <View style={styles.musicTimeRow}>
+                    <Text style={[styles.musicTimeText, { color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }]}>1:24</Text>
+                    <Text style={[styles.musicTimeText, { color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }]}>3:45</Text>
                   </View>
-
-                  <View style={styles.musicProgressBarContainer}>
-                    <View style={[styles.musicProgressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                      <View style={[styles.musicProgressBarFill, { width: `${currentTrack.progress * 100}%`, backgroundColor: colors.primary }]} />
-                    </View>
-                    <View style={styles.musicTimeRow}>
-                      <Text style={[styles.musicTimeText, { color: colors.textMuted }]}>1:24</Text>
-                      <Text style={[styles.musicTimeText, { color: colors.textMuted }]}>3:45</Text>
-                    </View>
-                  </View>
-                </BlurView>
-              </Animated.View>
-            </View>
-
-            <Animated.View entering={FadeInUp.delay(500)} style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.addQuoteButtonLarge, { backgroundColor: colors.surfaceMedium }]}
-                onPress={() => { setIsQuoteMenuOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
-              >
-                <Ionicons name="add" size={20} color={colors.text} style={{ marginRight: 8 }} />
-                <Text style={[styles.addQuoteButtonText, { color: colors.text }]}>Alıntı Ekle</Text>
-              </TouchableOpacity>
-
-              <View style={styles.timerFooter}>
-                <TouchableOpacity
-                  style={[styles.secondaryFooterButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); alert("Not ekleme özelliği yakında!"); }}
-                >
-                  <Ionicons name="pencil-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
-                  <Text style={[styles.footerButtonText, { color: colors.text }]}>Not Ekle</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.secondaryFooterButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
-                  onPress={onStopTimer}
-                >
-                  <Ionicons name="stop" size={20} color={isDark ? "#FF4B4B" : "#D32F2F"} style={{ marginRight: 8 }} />
-                  <Text style={[styles.footerButtonText, { color: colors.text }]}>Bitir</Text>
-                </TouchableOpacity>
+                </View>
               </View>
             </Animated.View>
-          </SafeAreaView>
+          </View>
 
-          {/* Inline Quote Modal */}
-          <Modal visible={isQuoteMenuOpen} transparent animationType="fade">
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              style={{ flex: 1 }}
+          <Animated.View entering={FadeInUp.delay(500).springify().damping(15)} style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[styles.addQuoteButtonLarge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' }]}
+              onPress={() => { setIsQuoteMenuOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
             >
-              <View style={styles.modalBackdropBlur}>
-                <Animated.View
-                  entering={FadeInDown.duration(300)}
-                  style={styles.quoteBubbleCentered}
-                >
-                  <BlurView intensity={isDark ? 90 : 100} tint={isDark ? "dark" : "light"} style={styles.bubbleBlurLarge}>
-                    <View style={styles.bubbleHeader}>
-                      <Text style={[styles.bubbleTitle, { color: colors.text }]}>Hızlı Alıntı</Text>
-                      <TouchableOpacity onPress={() => setIsQuoteMenuOpen(false)}>
-                        <Ionicons name="close" size={24} color={colors.textMuted} />
-                      </TouchableOpacity>
-                    </View>
+              <Ionicons name="add" size={20} color={isDark ? '#FFFFFF' : '#1A1A1A'} style={{ marginRight: 8 }} />
+              <Text style={[styles.addQuoteButtonText, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>Alıntı Ekle</Text>
+            </TouchableOpacity>
 
-                    <TextInput
-                      placeholder="Okuduğun etkileyici cümleyi buraya not et..."
-                      placeholderTextColor={colors.textMuted}
-                      multiline
-                      style={[styles.bubbleInput, { color: colors.text }]}
-                      autoFocus
-                      value={quoteText}
-                      onChangeText={setQuoteText}
-                    />
+            <View style={styles.timerFooter}>
+              <TouchableOpacity
+                style={[styles.secondaryFooterButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); alert("Not ekleme özelliği yakında!"); }}
+              >
+                <Ionicons name="pencil-outline" size={20} color={isDark ? '#FFFFFF' : '#1A1A1A'} style={{ marginRight: 8 }} />
+                <Text style={[styles.footerButtonText, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>Not Ekle</Text>
+              </TouchableOpacity>
 
-                    <View style={styles.quoteExtraRow}>
-                      <View style={[styles.pageInputContainer, { backgroundColor: 'rgba(0,0,0,0.05)' }]}>
-                        <Ionicons name="bookmark-outline" size={16} color={colors.textMuted} style={{ marginRight: 6 }} />
-                        <TextInput
-                          placeholder="Sayfa"
-                          placeholderTextColor={colors.textMuted}
-                          keyboardType="numeric"
-                          value={quotePage}
-                          onChangeText={setQuotePage}
-                          style={[styles.pageInput, { color: colors.text }]}
-                        />
-                      </View>
+              <TouchableOpacity
+                style={[styles.secondaryFooterButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                onPress={onStopTimer}
+              >
+                <Ionicons name="stop" size={20} color={isDark ? "#FF4B4B" : "#D32F2F"} style={{ marginRight: 8 }} />
+                <Text style={[styles.footerButtonText, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>Bitir</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </SafeAreaView>
 
-                      <TouchableOpacity
-                        style={[styles.cameraButton, { backgroundColor: colors.primary }]}
-                        onPress={onCamera}
-                      >
-                        <Ionicons name="camera" size={20} color="#FFF" />
-                        <Text style={styles.cameraButtonText}>Tara</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity
-                      style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                      onPress={onSaveQuote}
-                    >
-                      <Text style={styles.saveText}>Kaydet ve Devam Et</Text>
+        {/* Inline Quote Modal */}
+        <Modal visible={isQuoteMenuOpen} transparent animationType="fade">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalBackdropBlur}>
+              <Animated.View
+                entering={FadeInDown.duration(300).springify().damping(15)}
+                style={styles.quoteBubbleCentered}
+              >
+                <BlurView intensity={isDark ? 90 : 100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                <View style={styles.bubbleBlurLarge}>
+                  <View style={styles.bubbleHeader}>
+                    <Text style={[styles.bubbleTitle, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>Hızlı Alıntı</Text>
+                    <TouchableOpacity onPress={() => setIsQuoteMenuOpen(false)}>
+                      <Ionicons name="close" size={24} color={isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'} />
                     </TouchableOpacity>
-                  </BlurView>
-                </Animated.View>
-              </View>
-            </KeyboardAvoidingView>
-          </Modal>
-        </BlurView>
+                  </View>
+
+                  <TextInput
+                    placeholder="Okuduğun etkileyici cümleyi buraya not et..."
+                    placeholderTextColor={isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)'}
+                    multiline
+                    style={[styles.bubbleInput, { color: isDark ? '#FFFFFF' : '#1A1A1A', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }]}
+                    autoFocus
+                    value={quoteText}
+                    onChangeText={setQuoteText}
+                  />
+
+                  <View style={styles.quoteExtraRow}>
+                    <View style={[styles.pageInputContainer, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }]}>
+                      <Ionicons name="bookmark-outline" size={16} color={isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'} style={{ marginRight: 6 }} />
+                      <TextInput
+                        placeholder="Sayfa"
+                        placeholderTextColor={isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)'}
+                        keyboardType="numeric"
+                        value={quotePage}
+                        onChangeText={setQuotePage}
+                        style={[styles.pageInput, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}
+                      />
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                    onPress={onSaveQuote}
+                  >
+                    <Text style={styles.saveText}>Kaydet ve Devam Et</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </View>
     </Modal>
   );

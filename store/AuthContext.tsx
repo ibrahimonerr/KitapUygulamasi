@@ -1,24 +1,33 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../services/supabase';
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
   connectionError: string | null;
-  signUp: (username: string, password: string, fullName: string) => Promise<any>;
-  signIn: (username: string, password: string) => Promise<any>;
+  signInWithGoogle: () => Promise<boolean>;
+  signInWithApple: () => Promise<boolean>;
+  signInAsGuest: () => Promise<any>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const formatUsernameToEmail = (username: string) => {
-  const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9]/g, '.');
-  const email = `${cleanUsername}@bilgeokur.com`;
-  console.log("Generated Email:", email);
-  return email;
+const extractAuthParams = (url: string) => {
+  const [baseUrl, hashFragment = ''] = url.split('#');
+  const queryString = baseUrl.includes('?') ? baseUrl.split('?')[1] : '';
+  const params = new URLSearchParams([queryString, hashFragment].filter(Boolean).join('&'));
+
+  return {
+    accessToken: params.get('access_token'),
+    refreshToken: params.get('refresh_token'),
+    code: params.get('code'),
+  };
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -28,103 +37,117 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("AuthProvider initializing...");
+    if (Platform.OS === 'web') {
+      WebBrowser.maybeCompleteAuthSession();
+    }
+
     const envUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    console.log("- Env URL:", envUrl ? "Defined" : "MISSING");
-    
+
     if (!envUrl) {
-      setConnectionError("Supabase URL bulunamadı. .env dosyasını kontrol edin.");
+      setConnectionError('Supabase URL bulunamadı. .env dosyasını kontrol edin.');
     }
 
     if (!supabase || !supabase.auth) {
-      console.error("Supabase client not properly initialized!");
-      setConnectionError("Supabase istemcisi başlatılamadı.");
+      console.error('Supabase client not properly initialized!');
+      setConnectionError('Supabase istemcisi başlatılamadı.');
     }
 
-    // Get initial session
     const getInitialSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session: currentSession },
+          error,
+        } = await supabase.auth.getSession();
+
         if (error) {
-          console.error("Supabase Session Error:", error.message);
-        } else {
-          console.log("Supabase Session Check: Done", session ? "User active" : "No user");
+          console.error('Supabase Session Error:', error.message);
         }
-        setSession(session);
-        setUser(session?.user ?? null);
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
       } catch (err) {
-        console.error("Auth Init Error:", err);
+        console.error('Auth Init Error:', err);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     getInitialSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event: any, currentSession: any) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (username: string, password: string, fullName: string) => {
-    const email = formatUsernameToEmail(username);
-    
-    // 1. Sign up to Supabase Auth
-    console.log("Attempting Supabase Auth signUp for:", email);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+  const completeOAuthSession = async (provider: 'google' | 'apple') => {
+    const redirectTo = Linking.createURL('/');
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
       options: {
-        data: {
-          full_name: fullName,
-          username: username,
-        }
-      }
+        redirectTo,
+        skipBrowserRedirect: Platform.OS !== 'web',
+      },
     });
 
-    if (error) {
-      console.error("Supabase Auth.signUp error:", error);
-      throw error;
-    }
-    console.log("Supabase Auth.signUp success, user id:", data.user?.id);
+    if (error) throw error;
+    if (!data?.url) throw new Error('OAuth yönlendirme adresi alınamadı.');
 
-    // 2. Create profile entry (Handled via SQL Trigger normally, but manually here for local dev if needed)
-    if (data.user) {
-      console.log("Creating profile for user:", data.user.id);
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          username: username,
-          full_name: fullName,
-        });
-      
-      if (profileError) {
-        if (profileError.code === '23505') {
-          console.log('Profile already exists, skipping insert.');
-        } else {
-          console.error('Profile creation error:', profileError);
-          // Don't throw here if user was at least created in Auth
-        }
-      } else {
-        console.log("Profile created successfully");
+    if (Platform.OS === 'web') {
+      const webLocation = typeof globalThis !== 'undefined' ? globalThis.location : undefined;
+      if (!webLocation) {
+        throw new Error('Web yönlendirmesi başlatılamadı.');
       }
+      webLocation.assign(data.url);
+      return false;
     }
 
-    return data;
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+    if (result.type !== 'success' || !result.url) {
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        return false;
+      }
+      throw new Error('Sosyal giriş tamamlanamadı.');
+    }
+
+    const { accessToken, refreshToken, code } = extractAuthParams(result.url);
+
+    if (code) {
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+      return true;
+    }
+
+    if (!accessToken || !refreshToken) {
+      throw new Error('Oturum bilgileri alınamadı.');
+    }
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    if (sessionError) throw sessionError;
+    return true;
   };
 
-  const signIn = async (username: string, password: string) => {
-    const email = formatUsernameToEmail(username);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const signInWithGoogle = async () => {
+    return completeOAuthSession('google');
+  };
+
+  const signInWithApple = async () => {
+    return completeOAuthSession('apple');
+  };
+
+  const signInAsGuest = async () => {
+    const { data, error } = await supabase.auth.signInAnonymously();
     if (error) throw error;
     return data;
   };
@@ -134,7 +157,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isLoading, connectionError, signUp, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        isLoading,
+        connectionError,
+        signInWithGoogle,
+        signInWithApple,
+        signInAsGuest,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

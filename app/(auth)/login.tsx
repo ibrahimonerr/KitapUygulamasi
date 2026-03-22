@@ -1,224 +1,195 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { FONTS, SPACING } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../store/AuthContext';
 import * as Haptics from 'expo-haptics';
+import BounceButton from '../../components/ui/BounceButton';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Login() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { signIn, signUp, connectionError } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInAsGuest, connectionError } = useAuth();
 
-  const [isLoginMode, setIsLoginMode] = useState(true);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | 'guest' | null>(null);
   const [statusText, setStatusText] = useState('');
 
-  const handleAuth = async () => {
-    if (!username || !password || (!isLoginMode && !fullName)) {
-      Alert.alert("Hata", "Lütfen tüm alanları doldurun.");
-      return;
-    }
-
-    setLoading(true);
-    setStatusText("İşlem başlatılıyor...");
-    console.log("Starting auth in mode:", isLoginMode ? "Giriş" : "Kayıt");
-    
-    try {
-      if (isLoginMode) {
-        setStatusText("Giriş yapılıyor...");
-        await signIn(username, password);
-        setStatusText("Giriş başarılı! Yönlendiriliyorsunuz...");
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(tabs)/active');
-      } else {
-        setStatusText("Kayıt oluşturuluyor...");
-        const result = await signUp(username, password, fullName);
-        setStatusText("Kayıt başarılı! Profil oluşturuluyor...");
-        
-        if (result && result.session) {
-          setStatusText("Hoş geldiniz! Yönlendiriliyorsunuz...");
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          router.replace('/(tabs)/active');
-        } else {
-          setStatusText("Kayıt tamamlandı. Giriş yapabilirsiniz.");
-          Alert.alert(
-            "Kayıt Başarılı", 
-            "Hesabınız oluşturuldu. Lütfen şimdi belirlediğiniz şifre ile giriş yapın.",
-            [{ text: "Tamam", onPress: () => setIsLoginMode(true) }]
-          );
-        }
-      }
-    } catch (error: any) {
-      console.error("CRITICAL Auth error:", error);
-      const errorMsg = error.message || error.error_description || "Bilinmeyen hata";
-      setStatusText(`HATA: ${errorMsg}`);
-      Alert.alert("Hata", errorMsg);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGuestLogin = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.replace('/(auth)/onboarding');
-  };
-
-  const blobOpactiy = useSharedValue(0.2);
+  const blobOpacity = useSharedValue(0.2);
 
   useEffect(() => {
-    blobOpactiy.value = withRepeat(
+    blobOpacity.value = withRepeat(
       withSequence(withTiming(0.4, { duration: 5000 }), withTiming(0.2, { duration: 5000 })),
       -1,
       true
     );
 
-    // Diagnostic check on mount
-    const checkSupabase = async () => {
-      console.log("Login screen mounted, checking Supabase...");
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        Alert.alert("Konfigürasyon Hatası", "Supabase URL'i bulunamadı. Lütfen .env dosyasını kontrol edin ve sunucuyu yeniden başlatın.");
-      }
-    };
-    checkSupabase();
-  }, []);
+    if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+      Alert.alert('Konfigürasyon Hatası', 'Supabase URL bulunamadı. Lütfen .env dosyasını kontrol edin.');
+    }
+  }, [blobOpacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: blobOpactiy.value,
+    opacity: blobOpacity.value,
   }));
 
+  const handleSocialAuth = async (provider: 'google' | 'apple') => {
+    setSocialLoading(provider);
+    setStatusText(provider === 'google' ? 'Google ile giriş başlatılıyor...' : 'Apple ile giriş başlatılıyor...');
+
+    try {
+      const isCompleted = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
+
+      if (!isCompleted) {
+        setStatusText('Sosyal giriş iptal edildi.');
+        return;
+      }
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/(tabs)/active');
+    } catch (error: any) {
+      if (error?.message) {
+        Alert.alert('Sosyal Giriş Hatası', error.message);
+      }
+      setStatusText('Giriş başarısız.');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setSocialLoading('guest');
+    setStatusText('Misafir olarak giriş yapılıyor...');
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+        await signInAsGuest();
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/(auth)/onboarding');
+    } catch (error: any) {
+        setStatusText('Misafir girişi başarısız.');
+        Alert.alert('Hata', error.message);
+    } finally {
+        setSocialLoading(null);
+    }
+  };
+
   return (
-     <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <LinearGradient
-           colors={[colors.background, isDark ? '#1a1f2e' : '#FFFFFF']}
-           style={StyleSheet.absoluteFill}
-        />
-        
-        <Animated.View style={[
-          styles.backgroundBlob, 
-          animatedStyle, 
-          { backgroundColor: isDark ? colors.primary : 'rgba(94, 156, 255, 0.2)' }
-        ]} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient colors={[colors.background, isDark ? '#1a1f2e' : '#FFFFFF']} style={StyleSheet.absoluteFill} />
 
-        <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                 <BlurView intensity={30} tint={isDark ? "light" : "dark"} style={[styles.backButtonInner, { borderColor: colors.border }]}>
-                    <Ionicons name="chevron-back" size={24} color={colors.text} />
-                 </BlurView>
-            </TouchableOpacity>
+      <Animated.View
+        style={[
+          styles.backgroundBlob,
+          animatedStyle,
+          { backgroundColor: isDark ? colors.primary : 'rgba(94, 156, 255, 0.2)' },
+        ]}
+      />
+
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <BlurView intensity={30} tint={isDark ? 'light' : 'dark'} style={[styles.backButtonInner, { borderColor: colors.border }]}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </BlurView>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.content}>
+        <Animated.View entering={FadeInDown.springify().damping(15)}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Yolculuğa Başlıyoruz
+          </Text>
+        </Animated.View>
+
+        {connectionError && (
+          <Animated.View
+            entering={FadeInDown.delay(50)}
+            style={[
+              styles.errorBox,
+              { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: 'rgba(255, 59, 48, 0.3)', marginTop: 10 },
+            ]}
+          >
+            <Ionicons name="alert-circle" size={16} color="#FF3B30" />
+            <Text style={styles.errorText}>Bağlantı Hatası: {connectionError}</Text>
+          </Animated.View>
+        )}
+
+        {statusText !== '' && (
+          <Animated.View
+            entering={FadeInDown.delay(50)}
+            style={[
+              styles.statusBox,
+              { backgroundColor: statusText.startsWith('HATA') ? 'rgba(255, 59, 48, 0.1)' : 'rgba(94, 156, 255, 0.1)', marginTop: 10 },
+            ]}
+          >
+            <Text style={[styles.statusText, { color: statusText.startsWith('HATA') ? '#FF3B30' : colors.primary }]}>
+              {statusText}
+            </Text>
+          </Animated.View>
+        )}
+
+        <Animated.View entering={FadeInDown.delay(100).springify().damping(15)}>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            Tek dokunuşla sosyal hesaplarınla ya da misafir olarak giriş yap ve hemen okuma dünyana adım at.
+          </Text>
+        </Animated.View>
+
+        <View style={styles.socialSection}>
+          <Animated.View entering={FadeInDown.delay(200).springify().damping(15)}>
+            <BounceButton
+              style={[styles.socialButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}
+              onPress={() => handleSocialAuth('google')}
+              disabled={socialLoading !== null}
+            >
+              {socialLoading === 'google' ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={18} color={colors.text} />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>Google ile Devam Et</Text>
+                </>
+              )}
+            </BounceButton>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(300).springify().damping(15)}>
+            <BounceButton
+              style={[styles.socialButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}
+              onPress={() => handleSocialAuth('apple')}
+              disabled={socialLoading !== null}
+            >
+              {socialLoading === 'apple' ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={18} color={colors.text} />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>Apple ile Devam Et</Text>
+                </>
+              )}
+            </BounceButton>
+          </Animated.View>
         </View>
 
-        <View style={styles.content}>
-            <Animated.View entering={FadeInDown.duration(800)}>
-              <Text style={[styles.title, { color: colors.text }]}>
-                {isLoginMode ? 'Tekrar Hoş Geldin' : 'Yeni Yolculuk Başlıyor'}
-              </Text>
-
-              {connectionError && (
-                <View style={[styles.errorBox, { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: 'rgba(255, 59, 48, 0.3)' }]}>
-                  <Ionicons name="alert-circle" size={16} color="#FF3B30" />
-                  <Text style={styles.errorText}>Bağlantı Hatası: {connectionError}</Text>
-                </View>
-              )}
-
-              {statusText !== '' && (
-                <View style={[styles.statusBox, { backgroundColor: statusText.startsWith('HATA') ? 'rgba(255, 59, 48, 0.1)' : 'rgba(94, 156, 255, 0.1)' }]}>
-                  <Text style={[styles.statusText, { color: statusText.startsWith('HATA') ? '#FF3B30' : colors.primary }]}>
-                    {statusText}
-                  </Text>
-                </View>
-              )}
-
-              <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-                {isLoginMode 
-                  ? 'Kullanıcı adın ve şifrenle kaldığın yerden devam et.' 
-                  : 'Sadece kullanıcı adı belirleyerek butik kütüphaneni oluştur.'}
-              </Text>
-           </Animated.View>
-
-           <View style={styles.inputSection}>
-              {!isLoginMode && (
-                <View style={[styles.inputContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                  <Ionicons name="person-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput 
-                    style={[styles.input, { color: colors.text }]}
-                    placeholder="Ad Soyad"
-                    placeholderTextColor={colors.textMuted}
-                    value={fullName}
-                    onChangeText={setFullName}
-                  />
-                </View>
-              )}
-
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                <Ionicons name="at-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
-                <TextInput 
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Kullanıcı Adı"
-                  placeholderTextColor={colors.textMuted}
-                  value={username}
-                  onChangeText={(val) => setUsername(val.toLowerCase())}
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
-                <TextInput 
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Şifre"
-                  placeholderTextColor={colors.textMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.mainBtn, { backgroundColor: colors.primary }]}
-                onPress={handleAuth}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.mainBtnText}>
-                    {isLoginMode ? 'Giriş Yap' : 'Kayıt Ol'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                onPress={() => setIsLoginMode(!isLoginMode)}
-                style={styles.toggleBtn}
-              >
-                <Text style={{ color: colors.textMuted }}>
-                  {isLoginMode ? 'Hesabın yok mu? ' : 'Zaten üye misin? '}
-                  <Text style={{ color: colors.primary, fontWeight: 'bold' }}>
-                    {isLoginMode ? 'Kayıt Ol' : 'Giriş Yap'}
-                  </Text>
-                </Text>
-              </TouchableOpacity>
-           </View>
-
-           <Animated.View entering={FadeIn.delay(400).duration(800)} style={styles.actions}>
-              <TouchableOpacity activeOpacity={0.7} onPress={handleGuestLogin} style={[styles.secondaryButton, { borderColor: colors.surfaceGlass }]}>
+        <Animated.View entering={FadeInDown.delay(450).springify().damping(15)} style={styles.actions}>
+          <BounceButton onPress={handleGuestLogin} disabled={socialLoading !== null}>
+            <View style={[styles.secondaryButton, { borderColor: colors.border, width: '100%' }]}>
+               {socialLoading === 'guest' ? (
+                <ActivityIndicator color={colors.textMuted} />
+              ) : (
                  <Text style={[styles.secondaryButtonText, { color: colors.textMuted }]}>Misafir Olarak Devam Et</Text>
-              </TouchableOpacity>
-           </Animated.View>
-        </View>
-     </View>
+              )}
+            </View>
+          </BounceButton>
+        </Animated.View>
+      </View>
+    </View>
   );
 }
 
@@ -270,23 +241,22 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: SPACING.xl,
   },
-  inputSection: {
+  socialSection: {
     gap: 12,
+    marginBottom: SPACING.l,
+    marginTop: height * 0.05,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 56,
+  socialButton: {
+    height: 54,
     borderRadius: 16,
-    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
   },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontFamily: FONTS.primary.regular,
-    fontSize: 16,
+  socialButtonText: {
+    fontFamily: FONTS.primary.semiBold,
+    fontSize: 15,
   },
   errorBox: {
     flexDirection: 'row',
@@ -312,27 +282,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: FONTS.primary.bold,
     fontSize: 14,
-  },
-  mainBtn: {
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  mainBtnText: {
-    color: '#FFF',
-    fontFamily: FONTS.primary.bold,
-    fontSize: 16,
-  },
-  toggleBtn: {
-    alignItems: 'center',
-    padding: 10,
+    textAlign: 'center',
   },
   actions: {
     marginTop: 'auto',

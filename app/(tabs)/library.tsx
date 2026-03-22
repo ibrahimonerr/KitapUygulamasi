@@ -20,6 +20,7 @@ import Animated, {
   FadeIn
 } from 'react-native-reanimated';
 import { ISBNSync } from '../../components/library/ISBNSync';
+import EmptyState from '../../components/ui/EmptyState';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,35 +41,45 @@ const StackedShelf = ({ books, onBookPress, colors, isDark }: { books: Book[], o
     <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false} 
-        contentContainerStyle={styles.shelfScroll}
+        contentContainerStyle={[styles.shelfScroll, books.length === 0 && { paddingRight: 0 }]}
     >
-        {books.map((book, index) => {
-            const isFocused = focusedBookId === book.id;
-            return (
-                <TouchableOpacity 
-                    key={book.id} 
-                    activeOpacity={0.9} 
-                    onPress={() => handlePress(book)}
-                    style={[
-                        styles.stackedShelfItem,
-                        { 
-                            marginLeft: index === 0 ? 0 : -45, // Slightly tighter overlap
-                            zIndex: isFocused ? 100 : index,
-                            transform: [
-                                { translateY: isFocused ? -15 : 0 },
-                                { scale: isFocused ? 1.08 : 1 }
-                            ],
-                            shadowOpacity: isFocused ? 0.6 : 0.3,
-                        }
-                    ]}
-                >
-                    <Image source={{ uri: book.cover }} style={styles.stackedShelfCover} />
-                    <View style={[styles.stackedShelfTitleBlur, { backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)' }]}>
-                        <Text style={[styles.stackedShelfTitle, { color: colors.text }]} numberOfLines={1}>{book.title}</Text>
-                    </View>
-                </TouchableOpacity>
-            );
-        })}
+        {books.length === 0 ? (
+          <EmptyState 
+            title="Rafınız Boş" 
+            description="Yeni maceralara yelken açmak için arama yapın." 
+            iconName="library-outline" 
+            style={{ marginTop: 0, paddingVertical: SPACING.l }}
+          />
+        ) : (
+          books.map((book, index) => {
+              const isFocused = focusedBookId === book.id;
+              return (
+                  <Animated.View key={book.id} entering={FadeInDown.delay(index * 100).springify().damping(15)}>
+                    <TouchableOpacity 
+                        activeOpacity={0.9} 
+                        onPress={() => handlePress(book)}
+                        style={[
+                            styles.stackedShelfItem,
+                            { 
+                                marginLeft: index === 0 ? 0 : -45, // Slightly tighter overlap
+                                zIndex: isFocused ? 100 : books.length - index,
+                                transform: [
+                                    { translateY: isFocused ? -15 : 0 },
+                                    { scale: isFocused ? 1.08 : 1 }
+                                ],
+                                shadowOpacity: isFocused ? 0.6 : 0.3,
+                            }
+                        ]}
+                    >
+                        <Image source={{ uri: book.cover }} style={styles.stackedShelfCover} />
+                        <View style={[styles.stackedShelfTitleBlur, { backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)' }]}>
+                            <Text style={[styles.stackedShelfTitle, { color: colors.text }]} numberOfLines={1}>{book.title}</Text>
+                        </View>
+                    </TouchableOpacity>
+                  </Animated.View>
+              );
+          })
+        )}
     </ScrollView>
   );
 };
@@ -283,13 +294,6 @@ export default function LibraryTab() {
                                       onChangeText={setNewContentPage}
                                     />
                                   </View>
-                                  <TouchableOpacity 
-                                    style={styles.premiumScanButton}
-                                    onPress={() => alert("OCR modülü yakında!")}
-                                  >
-                                    <Ionicons name="camera" size={18} color="#FFF" style={{marginRight: 6}} />
-                                    <Text style={styles.premiumScanText}>Tara</Text>
-                                  </TouchableOpacity>
                                 </View>
 
                                 <TouchableOpacity 
