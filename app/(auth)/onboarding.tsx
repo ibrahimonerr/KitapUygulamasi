@@ -46,10 +46,13 @@ const GENRES_POOL = [
   'Distopya', 'Şiir', 'Biyografi', 'Sanat', 'Din', 'Mitoloji', 'Kişisel Gelişim', 'Fantastik'
 ];
 
+import { useUser } from '../../store/UserContext';
+
 export default function Onboarding() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { addBook, setTaste } = useLibrary();
+  const { updateProfile } = useUser();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([]);
@@ -112,7 +115,15 @@ export default function Onboarding() {
   const completeOnboarding = async () => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    setTaste({ authors: selectedAuthors, genres: selectedGenres });
+    const tasteProfile = { authors: selectedAuthors, genres: selectedGenres };
+    setTaste(tasteProfile);
+    
+    // Save to user profile via Supabase
+    try {
+      await updateProfile({ taste_profile: tasteProfile });
+    } catch (e) {
+      console.error("Failed to sync taste profile during onboarding:", e);
+    }
 
     if (activeBook) {
       const book = toLibraryBookInput(activeBook);

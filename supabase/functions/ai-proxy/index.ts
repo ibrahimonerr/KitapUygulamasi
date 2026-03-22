@@ -149,9 +149,14 @@ Bu notlara dayanarak kullanıcıya okuma yolculuğunda rehberlik edecek, bilgece
       }
 
       case 'generateBookBriefing': {
-         const { bookTitle, author, userNotes, userQuotes } = payload;
+         const { bookTitle, author, userNotes, userQuotes, tasteProfile } = payload;
          const prompt = `Sen bilge bir okuma koçusun. Kullanıcının "${bookTitle}" (${author}) kitabı için kişisel bir brifing hazırla. 
-Okuyucunun alıntılardaki duygu durumunu ve fikirlerini analiz ederek, ona hem kitabı hatırlatacak hem de bilgece bir yol gösterecek bir rehber hazırla. Dili samimi, bilge, teşvik edici olsun.
+Okuyucunun alıntılardaki duygu durumunu ve fikirlerini analiz ederek, ona hem kitabı hatırlatacak hem de bilgece bir yol gösterecek bir rehber hazırla. 
+
+Kullanıcının Genel Okuma Zevki (ÖNEMLİ): ${JSON.stringify(tasteProfile)}. 
+Lütfen brifingini bu zevk profiliyle ilişkilendir (Örn: "Sabahattin Ali seven biri olarak bu kitaptaki melankoli sana tanıdık gelebilir...").
+
+Dili samimi, bilge, teşvik edici olsun.
 Notlar: ${userNotes?.length > 0 ? userNotes.join("\n- ") : "Yok."}
 Alıntılar: ${userQuotes?.length > 0 ? userQuotes.join("\n- ") : "Yok."}
 Sadece JSON döndür: { "focus": "...", "importance": "...", "story": "...", "message": "..." }`;

@@ -23,12 +23,16 @@ interface ReadingTimerModalProps {
   currentTrack: { title: string; artist: string; progress: number };
   isQuoteMenuOpen: boolean;
   setIsQuoteMenuOpen: (val: boolean) => void;
+  isNoteMenuOpen: boolean;
+  setIsNoteMenuOpen: (val: boolean) => void;
   quoteText: string;
   setQuoteText: (text: string) => void;
   quotePage: string;
   setQuotePage: (page: string) => void;
+  noteText: string;
+  setNoteText: (text: string) => void;
   onSaveQuote: () => void;
-  onCamera: () => void;
+  onSaveNote: () => void;
   colors: any;
   isDark: boolean;
 }
@@ -47,12 +51,16 @@ export const ReadingTimerModal: React.FC<ReadingTimerModalProps> = ({
   currentTrack,
   isQuoteMenuOpen,
   setIsQuoteMenuOpen,
+  isNoteMenuOpen,
+  setIsNoteMenuOpen,
   quoteText,
   setQuoteText,
   quotePage,
   setQuotePage,
+  noteText,
+  setNoteText,
   onSaveQuote,
-  onCamera,
+  onSaveNote,
   colors,
   isDark
 }) => {
@@ -153,7 +161,7 @@ export const ReadingTimerModal: React.FC<ReadingTimerModalProps> = ({
             <View style={styles.timerFooter}>
               <TouchableOpacity
                 style={[styles.secondaryFooterButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); alert("Not ekleme özelliği yakında!"); }}
+                onPress={() => { setIsNoteMenuOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
               >
                 <Ionicons name="pencil-outline" size={20} color={isDark ? '#FFFFFF' : '#1A1A1A'} style={{ marginRight: 8 }} />
                 <Text style={[styles.footerButtonText, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>Not Ekle</Text>
@@ -172,15 +180,9 @@ export const ReadingTimerModal: React.FC<ReadingTimerModalProps> = ({
 
         {/* Inline Quote Modal */}
         <Modal visible={isQuoteMenuOpen} transparent animationType="fade">
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={{ flex: 1 }}
-          >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
             <View style={styles.modalBackdropBlur}>
-              <Animated.View
-                entering={FadeInDown.duration(300).springify().damping(15)}
-                style={styles.quoteBubbleCentered}
-              >
+              <Animated.View entering={FadeInDown.duration(300).springify().damping(15)} style={styles.quoteBubbleCentered}>
                 <BlurView intensity={isDark ? 90 : 100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                 <View style={styles.bubbleBlurLarge}>
                   <View style={styles.bubbleHeader}>
@@ -214,11 +216,46 @@ export const ReadingTimerModal: React.FC<ReadingTimerModalProps> = ({
                     </View>
                   </View>
 
-                  <TouchableOpacity
-                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                    onPress={onSaveQuote}
-                  >
+                  <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={onSaveQuote}>
                     <Text style={styles.saveText}>Kaydet ve Devam Et</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Inline Note (Pen Note) Modal */}
+        <Modal visible={isNoteMenuOpen} transparent animationType="fade">
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <View style={styles.modalBackdropBlur}>
+              <Animated.View entering={FadeInDown.duration(300).springify().damping(15)} style={styles.quoteBubbleCentered}>
+                <BlurView intensity={isDark ? 90 : 100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                <View style={[styles.bubbleBlurLarge, { borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1 }]}>
+                  <View style={styles.bubbleHeader}>
+                    <Text style={[styles.bubbleTitle, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>Cam Not (Pen Note)</Text>
+                    <TouchableOpacity onPress={() => setIsNoteMenuOpen(false)}>
+                      <Ionicons name="close" size={24} color={isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <TextInput
+                    placeholder="Aklına gelenleri buraya karala..."
+                    placeholderTextColor={isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)'}
+                    multiline
+                    style={[styles.bubbleInput, { 
+                      color: isDark ? '#FFFFFF' : '#1A1A1A', 
+                      backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
+                      fontFamily: FONTS.serif.regular, 
+                      fontSize: 16
+                    }]}
+                    autoFocus
+                    value={noteText}
+                    onChangeText={setNoteText}
+                  />
+
+                  <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary, marginTop: 12 }]} onPress={onSaveNote}>
+                    <Text style={styles.saveText}>Cam Notu Kaydet</Text>
                   </TouchableOpacity>
                 </View>
               </Animated.View>

@@ -16,6 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { FONTS, SPACING } from '../../constants/theme';
 import { supabase } from '../../services/supabase';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { useLibrary } from '../../store/LibraryContext';
+import { useClubs } from '../../store/ClubsContext';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -46,16 +49,66 @@ export const ClubChat: React.FC<ClubChatProps> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [revealedSpoilers, setRevealedSpoilers] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList>(null);
+  
+  const { activeBooks } = useLibrary();
+  const { myClubs } = useClubs();
+
+  const club = myClubs.find(c => c.id === clubId);
   const MY_USER_ID = 'user_unique_id_123'; // Logic would come from Auth
 
+  // Find user's progress in this club's reading book
+  let myCurrentPage = 0;
+  if (club && club.bookTitle) {
+    const matchingBook = activeBooks.find(b => b.title === club.bookTitle);
+    if (matchingBook && matchingBook.pages) {
+      const parts = matchingBook.pages.split('/');
+      const totalPages = parts.length === 2 ? parseInt(parts[1]) : 300;
+      myCurrentPage = Math.floor(matchingBook.progress * totalPages);
+    }
+  }
+
+  // To test the shield easily, let's hardcode myCurrentPage lower
+  // For the demo:
+  if (myCurrentPage === 0) myCurrentPage = 50;
+
   useEffect(() => {
-    // Starting with empty messages
-    setMessages([]);
+    // Starting with mock messages to demonstrate Spoiler Shield
+    setMessages([
+      {
+        id: "1",
+        user_id: "other_user_1",
+        user_name: "Ayşe",
+        user_avatar: "https://i.pravatar.cc/150?u=ayse",
+        text: "Kitaba yeni başladım, dilinin sadeliği harika.",
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+      },
+      {
+        id: "2",
+        user_id: "other_user_2",
+        user_name: "Burak",
+        user_avatar: "https://i.pravatar.cc/150?u=burak",
+        text: "Asıl şok edici olan kısmı sanırım 120. sayfaydı. Ana karakterin verdiği karar tüm algımı değiştirdi!",
+        created_at: new Date(Date.now() - 1800000).toISOString(),
+        type: "page",
+        page_number: 120
+      }
+    ]);
   }, []);
 
   const handleSendMessage = () => {
     if (inputText.trim() === '') return;
+
+    // Check if input looks like a page reference: e.g. "s.140 ..."
+    let type: 'standard' | 'page' = 'standard';
+    let pageNumber: number | undefined;
+
+    const pageMatch = inputText.match(/^[s|p]\.?\s*(\d+)[:| -]?/i);
+    if (pageMatch) {
+      type = 'page';
+      pageNumber = parseInt(pageMatch[1], 10);
+    }
 
     const newMessage: Message = {
       id: Math.random().toString(),
@@ -64,17 +117,29 @@ export const ClubChat: React.FC<ClubChatProps> = ({
       user_avatar: 'https://i.pravatar.cc/150?u=me',
       text: inputText,
       created_at: new Date().toISOString(),
+      type: type,
+      page_number: pageNumber
     };
 
     setMessages([...messages, newMessage]);
     setInputText('');
-    
-    // In production, this would be a supabase.from('messages').insert(...) call
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const toggleSpoiler = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setRevealedSpoilers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const renderMessage = ({ item, index }: { item: Message, index: number }) => {
     const isMe = item.user_id === MY_USER_ID;
-    
+    const isSpoiler = !isMe && item.type === 'page' && item.page_number && item.page_number > myCurrentPage && !revealedSpoilers.has(item.id);
+
     return (
       <Animated.View 
         entering={FadeInDown.delay(index * 50)}
@@ -103,12 +168,22 @@ export const ClubChat: React.FC<ClubChatProps> = ({
             </View>
           )}
 
-          <Text style={[
-            styles.messageText,
-            { color: isMe ? '#FFF' : colors.text }
-          ]}>
-            {item.text}
-          </Text>
+          {isSpoiler ? (
+            <TouchableOpacity onPress={() => toggleSpoiler(item.id)} activeOpacity={0.8} style={styles.spoilerContainer}>
+              <BlurView intensity={isDark ? 80 : 40} tint={isDark ? "dark" : "light"} style={styles.spoilerBlur}>
+                <Ionicons name="eye-off-outline" size={24} color={colors.text} />
+                <Text style={[styles.spoilerText, { color: colors.text }]}>Sürprizbozan Kalkanı</Text>
+                <Text style={[styles.spoilerSubtext, { color: colors.textMuted }]}>Kitapta henüz sayfa {item.page_number}'e gelmediniz. Görmek için dokunun.</Text>
+              </BlurView>
+            </TouchableOpacity>
+          ) : (
+            <Text style={[
+              styles.messageText,
+              { color: isMe ? '#FFF' : colors.text }
+            ]}>
+              {item.text}
+            </Text>
+          )}
           
           <Text style={[
             styles.timestamp,
@@ -132,7 +207,7 @@ export const ClubChat: React.FC<ClubChatProps> = ({
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Kulüp Sohbeti</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>1 üye aktif</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>{club?.bookTitle || club?.name}</Text>
         </View>
         <View style={{ width: 44 }} />
       </View>
@@ -147,13 +222,16 @@ export const ClubChat: React.FC<ClubChatProps> = ({
       />
 
       <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={styles.inputBar}>
-        <TouchableOpacity style={styles.attachBtn}>
-          <Ionicons name="add" size={24} color={colors.primary} />
+        <TouchableOpacity style={styles.attachBtn} onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setInputText("s. "); 
+        }}>
+          <Ionicons name="book-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
         
         <TextInput
           style={[styles.input, { color: colors.text, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
-          placeholder="Düşüncelerini paylaş..."
+          placeholder="Sayfa no eklemek için 's. 120' yaz..."
           placeholderTextColor={colors.textMuted}
           value={inputText}
           onChangeText={setInputText}
@@ -185,6 +263,7 @@ const styles = StyleSheet.create({
   },
   headerInfo: {
     alignItems: 'center',
+    maxWidth: '70%',
   },
   headerTitle: {
     fontFamily: FONTS.primary.bold,
@@ -223,6 +302,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 20,
     position: 'relative',
+    overflow: 'hidden',
   },
   bubbleMe: {
     borderBottomRightRadius: 4,
@@ -239,6 +319,32 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary.regular,
     fontSize: 15,
     lineHeight: 20,
+  },
+  spoilerContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,0,0,0.1)',
+  },
+  spoilerBlur: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.02)',
+  },
+  spoilerText: {
+    fontFamily: FONTS.primary.bold,
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  spoilerSubtext: {
+    fontFamily: FONTS.primary.regular,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: 'center',
+    lineHeight: 16,
   },
   timestamp: {
     fontFamily: FONTS.primary.regular,

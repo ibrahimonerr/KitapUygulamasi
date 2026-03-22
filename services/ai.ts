@@ -41,8 +41,8 @@ export const generateMentorInsight = async (bookTitle: string, notes: string[]) 
     }
 };
 
-export const generateBookBriefing = async (bookTitle: string, author: string, userNotes: string[] = [], userQuotes: string[] = []) => {
-  const contextHash = getContextHash(userNotes, userQuotes);
+export const generateBookBriefing = async (bookTitle: string, author: string, userNotes: string[] = [], userQuotes: string[] = [], tasteProfile: any = {}) => {
+  const contextHash = getContextHash(userNotes, userQuotes) + JSON.stringify(tasteProfile);
   
   // 1. Try Cache First
   const cached = await getCachedBriefing(bookTitle, author, contextHash);
@@ -55,7 +55,7 @@ export const generateBookBriefing = async (bookTitle: string, author: string, us
 
   try {
       const { data, error } = await supabase.functions.invoke('ai-proxy', {
-          body: { action: 'generateBookBriefing', payload: { bookTitle, author, userNotes, userQuotes } }
+          body: { action: 'generateBookBriefing', payload: { bookTitle, author, userNotes, userQuotes, tasteProfile } }
       });
       if (error) throw error;
       finalBriefing = data;

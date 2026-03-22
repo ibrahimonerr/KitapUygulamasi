@@ -12,6 +12,8 @@ import { UserProvider } from '../store/UserContext';
 import { AuthProvider } from '../store/AuthContext';
 import { SocialProvider } from '../store/SocialContext';
 
+import { GamificationProvider } from '../store/GamificationContext';
+
 if (!__DEV__) {
   console.log = () => {};
   console.warn = () => {};
@@ -40,19 +42,21 @@ function RootLayoutContent() {
           <SocialProvider>
             <UserProvider>
               <ClubsProvider>
-                <StatusBar style={isDark ? "light" : "dark"} />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.background },
-                  }}
-                >
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="search" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="club/[id]" options={{ presentation: 'card' }} />
-                </Stack>
+                <GamificationProvider>
+                  <StatusBar style={isDark ? "light" : "dark"} />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.background },
+                    }}
+                  >
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+                    <Stack.Screen name="club/[id]" options={{ presentation: 'card' }} />
+                  </Stack>
+                </GamificationProvider>
               </ClubsProvider>
             </UserProvider>
           </SocialProvider>

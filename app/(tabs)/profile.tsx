@@ -27,6 +27,7 @@ import SettingsModal from '../../components/profile/SettingsModal';
 import NotificationsModal from '../../components/profile/NotificationsModal';
 import { useUser } from '../../store/UserContext';
 import { useLibrary } from '../../store/LibraryContext';
+import { useGamification } from '../../store/GamificationContext';
 
 const { width } = Dimensions.get('window');
 
@@ -35,6 +36,7 @@ export default function ProfileTab() {
   const { colors, isDark } = useTheme();
   const { profile, isLoading } = useUser();
   const { activeBooks, finishedBooks, waitlistBooks } = useLibrary();
+  const { data: gamification } = useGamification();
   const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = React.useState(false);
   const [isNotifModalVisible, setIsNotifModalVisible] = React.useState(false);
@@ -174,6 +176,11 @@ export default function ProfileTab() {
           <View style={[styles.statItem]}>
             <Text style={[styles.statValue, { color: colors.text }]}>{totalQuotes}</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Alıntı</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={[styles.statItem]}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>{gamification?.streak || 0}</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Seri</Text>
           </View>
         </View>
 

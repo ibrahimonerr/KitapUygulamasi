@@ -18,22 +18,22 @@ Bu belge, `implementation_plan.md` baz alınarak adım adım geliştirme süreci
 ## Phase 2: AI Core & Semantic Data (Yapay Zeka ve Veri Yönetimi)
 - [x] Library Tab: Kitapların "Stacked" (Yığın) dizilimiyle sergilendiği temel UI'ın oluşturulması.
 - [x] Google Books API / Open Library API ile Evrensel Arama (Global Search) entegrasyonu.
-- [ ] Spotify benzeri "Zevk Küratörlüğü" (Onboarding) ekranlarının tasarlanması ve mantığının kurulması.
-- [ ] Gemini 2.5+ API entegrasyonu: "Wise Mentor" brifing modülünün kurulması.
-- [ ] "İlk Aktif Kitap" seçimi ve sayfa/hedef belirleme akışının uygulanması.
-- [ ] OCR modülünün yapılandırılması (Kamera ile alıntı tarama).
-- [ ] Supabase pgvector kurulumu ve Semantik Alıntı Arama (Semantic Quote Search) altyapısının yazılması.
-- [ ] AI "Sana Özel" (For You) derin analiz ve kitap öneri modülünün geliştirilmesi.
+- [x] Spotify benzeri "Zevk Küratörlüğü" (Onboarding) ekranlarının tasarlanması ve mantığının kurulması.
+- [x] Gemini 2.5+ API entegrasyonu: "Wise Mentor" brifing modülünün kurulması.
+- [x] "İlk Aktif Kitap" seçimi ve sayfa/hedef belirleme akışının uygulanması.
+- [x] OCR modülünün yapılandırılması (Kullanıcı isteğiyle iptal edildi).
+- [x] Supabase pgvector kurulumu ve Semantik Alıntı Arama (Semantic Quote Search) altyapısının yazılması.
+- [x] AI "Sana Özel" (For You) derin analiz ve kitap öneri modülünün geliştirilmesi.
 
 ## Phase 3: Social, Edge Cases & Polish (Sosyal Özellikler ve İnce Ayarlar)
-- [ ] Butik Kitap Kulüpleri (Boutique Clubs) mantığının ve UI'ının geliştirilmesi.
-- [ ] "Spoiler Shield" (Sürprizbozan Kalkanı) algoritmasının ve sıvı cam bulanıklık efektinin uygulanması.
-- [ ] Seri (Streak) takibi ve rozet sisteminin (Gamification) eklenmesi.
-- [ ] Alıntılar için "Stil Editörü" (Style Editor) ve cam dokulu not düzenleyicisinin (Pen Note) tasarlanması.
-- [ ] Çevrimdışı durumlar için arka plan veri senkronizasyon onarımının (Local-First sync) mükemmelleştirilmesi.
-- [ ] Kindle / Apple Books "My Clippings.txt" veya dışa aktarım dosyalarının ayrıştırılması ve sisteme aktarılması.
-- [ ] Bağlamsal Anlık Bildirimlerin (Push Notifications) entegrasyonu.
-- [ ] Harici Müzik Entegrasyonu (Spotify/Apple Music Remote SDK) ve Uygulama İçi Odak Sesleri (Expo-AV).
+- [x] Butik Kitap Kulüpleri (Boutique Clubs) mantığının ve UI'ının geliştirilmesi.
+- [x] "Spoiler Shield" (Sürprizbozan Kalkanı) algoritmasının ve sıvı cam bulanıklık efektinin uygulanması.
+- [x] Seri (Streak) takibi ve rozet sisteminin (Gamification) eklenmesi.
+- [x] Alıntılar için "Stil Editörü" (Style Editor) ve cam dokulu not düzenleyicisinin (Pen Note) tasarlanması.
+- [x] Çevrimdışı durumlar için arka plan veri senkronizasyon onarımının (Local-First sync) mükemmelleştirilmesi.
+- [x] Kindle / Apple Books "My Clippings.txt" veya dışa aktarım dosyalarının ayrıştırılması ve sisteme aktarılması.
+- [x] Bağlamsal Anlık Bildirimlerin (Push Notifications) entegrasyonu.
+- [x] Harici Müzik Entegrasyonu (Spotify/Apple Music Remote SDK) ve Uygulama İçi Odak Sesleri (Expo-AV).
 
 ---
 > Proje ilerledikçe bu belge güncellenecek ve tamamlanan adımlar işaretlenecektir.

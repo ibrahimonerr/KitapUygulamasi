@@ -3,6 +3,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Audio } from 'expo-av';
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -38,12 +39,14 @@ import { AIDiscussionPartner } from '../../components/active/AIDiscussionPartner
 import ForYouSection from '../../components/active/ForYouSection';
 import { generateForYouContent, Recommendation } from '../../services/forYouService';
 import { useUser } from '../../store/UserContext';
+import { useGamification } from '../../store/GamificationContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ActiveTab() {
   const { colors, isDark } = useTheme();
   const { activeBooks, addQuoteToBook, reorderActiveBooks, finishBook, addNoteToBook, resetDatabase } = useLibrary();
+  const { data: gamification, updateDailyGoal, addReadingMinutes: recordReadingTime, incrementStreak } = useGamification();
   const router = useRouter();
 
   const handleReset = () => {
@@ -66,9 +69,9 @@ export default function ActiveTab() {
   };
 
   // State Management
-  const [readingMinutes, setReadingMinutes] = useState(0);
-  const [dailyGoal, setDailyGoal] = useState(30);
-  const [streak, setStreak] = useState(0);
+  const [readingMinutes, setReadingMinutes] = useState(0); // Today's session mins
+  const dailyGoal = gamification.dailyGoal;
+  const streak = gamification.streak;
   const [isGoalReached, setIsGoalReached] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [isGoalModalVisible, setIsGoalModalVisible] = useState(false);
@@ -76,8 +79,10 @@ export default function ActiveTab() {
   const [activeSeconds, setActiveSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isQuoteMenuOpen, setIsQuoteMenuOpen] = useState(false);
+  const [isNoteMenuOpen, setIsNoteMenuOpen] = useState(false);
   const [quoteText, setQuoteText] = useState('');
   const [quotePage, setQuotePage] = useState('');
+  const [noteText, setNoteText] = useState('');
   const [isBriefingExpanded, setIsBriefingExpanded] = useState(false);
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<any>(null);
@@ -103,9 +108,9 @@ export default function ActiveTab() {
 
   // Goal/Streak Logic
   useEffect(() => {
-    if (readingMinutes >= dailyGoal && !isGoalReached) {
+    if (readingMinutes >= dailyGoal && !isGoalReached && readingMinutes > 0) {
       setIsGoalReached(true);
-      setStreak(prev => prev + 1);
+      incrementStreak();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }, [readingMinutes, dailyGoal]);
@@ -124,7 +129,8 @@ export default function ActiveTab() {
           currentBook.title, 
           currentBook.author,
           currentBook.notes?.map(n => n.text) || [],
-          currentBook.quotes?.map(q => q.text) || []
+          currentBook.quotes?.map(q => q.text) || [],
+          profile?.taste_profile || {}
         );
         setBriefingData(data);
         setIsBriefingLoading(false);
@@ -227,16 +233,32 @@ export default function ActiveTab() {
     progress: 0.35,
   });
 
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  // Stop music on unmount
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
   const handleStartTimer = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsReading(true);
   };
 
-  const handleStopTimer = () => {
+  const handleStopTimer = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (sound) {
+      await sound.stopAsync();
+      setIsPlayingMusic(false);
+    }
     const addedMinutes = Math.floor(activeSeconds / 60);
     if (addedMinutes > 0) {
       setReadingMinutes(prev => prev + addedMinutes);
+      recordReadingTime(addedMinutes);
     }
     setIsReading(false);
     setIsPaused(false);
@@ -260,9 +282,31 @@ export default function ActiveTab() {
     }
   };
 
-  const toggleMusic = () => {
-    setIsPlayingMusic(!isPlayingMusic);
+  const toggleMusic = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (isPlayingMusic) {
+      // Pause
+      if (sound) await sound.pauseAsync();
+      setIsPlayingMusic(false);
+    } else {
+      // Play
+      try {
+        if (!sound) {
+          // Play an ambient rain/focus sound placeholder URL
+          const { sound: newSound } = await Audio.Sound.createAsync(
+            { uri: 'https://cdn.pixabay.com/download/audio/2021/08/09/audio_88447e12f2.mp3?filename=rain-and-thunder-16705.mp3' },
+            { shouldPlay: true, isLooping: true }
+          );
+          setSound(newSound);
+        } else {
+          await sound.playAsync();
+        }
+        setIsPlayingMusic(true);
+      } catch (e) {
+        console.error("Audio playback error", e);
+        alert("Odak müziği yüklenemedi.");
+      }
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -279,7 +323,7 @@ export default function ActiveTab() {
   };
 
   const saveGoal = () => {
-    setDailyGoal(tempGoal);
+    updateDailyGoal(tempGoal);
     setIsGoalModalVisible(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
@@ -319,6 +363,18 @@ export default function ActiveTab() {
       alert("Alıntı kütüphanene eklendi!");
     } else {
       alert("Lütfen bir alıntı metni girin.");
+    }
+  };
+
+  const handleSaveInlineNote = () => {
+    if (currentBook && noteText.trim()) {
+      addNoteToBook(currentBook.id, noteText);
+      setIsNoteMenuOpen(false);
+      setNoteText('');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      alert("Not kütüphanene eklendi!");
+    } else {
+      alert("Lütfen bir not metni girin.");
     }
   };
 
@@ -462,12 +518,16 @@ export default function ActiveTab() {
         currentTrack={currentTrack}
         isQuoteMenuOpen={isQuoteMenuOpen}
         setIsQuoteMenuOpen={setIsQuoteMenuOpen}
+        isNoteMenuOpen={isNoteMenuOpen}
+        setIsNoteMenuOpen={setIsNoteMenuOpen}
         quoteText={quoteText}
         setQuoteText={setQuoteText}
         quotePage={quotePage}
         setQuotePage={setQuotePage}
+        noteText={noteText}
+        setNoteText={setNoteText}
         onSaveQuote={handleSaveInlineQuote}
-        onCamera={handleCamera}
+        onSaveNote={handleSaveInlineNote}
         colors={colors}
         isDark={isDark}
       />

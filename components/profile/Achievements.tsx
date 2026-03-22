@@ -4,11 +4,11 @@ import { FONTS, SPACING } from '../../constants/theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-
-const BADGES: any[] = [];
+import { useGamification, BADGE_DEFINITIONS } from '../../store/GamificationContext';
 
 export default function Achievements() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { data: gamification } = useGamification();
 
   return (
     <Animated.View 
@@ -17,14 +17,35 @@ export default function Achievements() {
     >
       <Text style={[styles.title, { color: colors.text }]}>Başarı Kupası</Text>
       <View style={styles.grid}>
-        {BADGES.map((badge, index) => (
-          <View key={badge.id} style={styles.badgeWrapper}>
-            <View style={[styles.badgeCircle, { backgroundColor: colors.surfaceMedium }]}>
-              <Ionicons name={badge.icon as any} size={28} color={badge.color} />
+        {BADGE_DEFINITIONS.map((badge, index) => {
+          const isEarned = gamification.badges.includes(badge.id);
+          
+          return (
+            <View key={badge.id} style={styles.badgeWrapper}>
+              <View style={[
+                styles.badgeCircle, 
+                { backgroundColor: isEarned ? colors.surfaceMedium : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' },
+                !isEarned && { borderColor: 'transparent' }
+              ]}>
+                <Ionicons 
+                  name={badge.icon as any} 
+                  size={28} 
+                  color={isEarned ? badge.color : colors.textMuted} 
+                  style={{ opacity: isEarned ? 1 : 0.3 }}
+                />
+              </View>
+              <Text 
+                style={[
+                  styles.badgeLabel, 
+                  { color: isEarned ? colors.text : colors.textMuted },
+                  !isEarned && { opacity: 0.5 }
+                ]}
+              >
+                {badge.label}
+              </Text>
             </View>
-            <Text style={[styles.badgeLabel, { color: colors.text }]}>{badge.label}</Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </Animated.View>
   );
@@ -41,12 +62,15 @@ const styles = StyleSheet.create({
   },
   grid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'flex-start',
   },
   badgeWrapper: {
     alignItems: 'center',
-    width: '22%',
+    width: '30%',
+    marginBottom: SPACING.m,
   },
   badgeCircle: {
     width: 60,
