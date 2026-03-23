@@ -10,6 +10,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../store/AuthContext';
 import * as Haptics from 'expo-haptics';
 import BounceButton from '../../components/ui/BounceButton';
+import { supabaseUrl } from '../../services/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,7 +31,7 @@ export default function Login() {
       true
     );
 
-    if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+    if (!supabaseUrl) {
       Alert.alert('Konfigürasyon Hatası', 'Supabase URL bulunamadı. Lütfen .env dosyasını kontrol edin.');
     }
   }, [blobOpacity]);

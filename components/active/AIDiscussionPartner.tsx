@@ -15,11 +15,10 @@ import {
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { FONTS, SPACING } from '../../constants/theme';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from '../../services/supabase';
 import Animated, { FadeIn, FadeInDown, SlideInUp } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
-const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '');
 
 interface Message {
   id: string;
@@ -52,7 +51,9 @@ export const AIDiscussionPartner: React.FC<AIDiscussionPartnerProps> = ({
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-  const chatRef = useRef<any>(null);
+  
+  // Keep track of the exact history format Gemini expects
+  const apiHistoryRef = useRef<any[]>([]);
 
   useEffect(() => {
     if (isVisible && messages.length === 0) {
@@ -63,8 +64,6 @@ export const AIDiscussionPartner: React.FC<AIDiscussionPartnerProps> = ({
   const startInterview = async () => {
     setIsLoading(true);
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      
       const systemPrompt = `
         Sen "Bilge Rehber" isimli, Sokratik yöntemle konuşan bir edebiyat mentorüsün.
         Kullanıcı "${bookTitle}" (${author}) kitabını az önce bitirdi.
@@ -76,24 +75,39 @@ export const AIDiscussionPartner: React.FC<AIDiscussionPartnerProps> = ({
         Kısa, öz ve etkileyici konuş. İlk mesajına tebrik ederek başla.
       `;
 
-      chatRef.current = model.startChat({
-        history: [
-          {
-            role: "user",
-            parts: [{ text: systemPrompt }],
-          },
-          {
-            role: "model",
-            parts: [{ text: "Harika bir yolculuğun sonuna geldin. Seninle bu eser üzerine derinleşmek için sabırsızlanıyorum." }],
-          },
-        ],
+      apiHistoryRef.current = [
+        {
+          role: "user",
+          parts: [{ text: systemPrompt }],
+        },
+        {
+          role: "model",
+          parts: [{ text: "Harika bir yolculuğun sonuna geldin. Seninle bu eser üzerine derinleşmek için sabırsızlanıyorum." }],
+        },
+      ];
+
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: { 
+          action: 'discussionChat', 
+          payload: { 
+            history: apiHistoryRef.current, 
+            message: "Mülakatı başlat ve bana ilk sorunu sor." 
+          } 
+        }
       });
 
-      const initialQuestion = await chatRef.current.sendMessage("Mülakatı başlat ve bana ilk sorunu sor.");
-      const text = initialQuestion.response.text();
+      if (error) throw error;
+      
+      const responseText = data.text;
+
+      // Update history reference with user's invisible prompt and model's visible reply
+      apiHistoryRef.current.push(
+         { role: 'user', parts: [{ text: "Mülakatı başlat ve bana ilk sorunu sor." }] },
+         { role: 'model', parts: [{ text: responseText }] }
+      );
       
       setMessages([
-        { id: '1', role: 'model', text: text }
+        { id: '1', role: 'model', text: responseText }
       ]);
     } catch (error) {
       console.error("AI Partner error:", error);
@@ -106,17 +120,37 @@ export const AIDiscussionPartner: React.FC<AIDiscussionPartnerProps> = ({
   const handleSend = async () => {
     if (inputText.trim() === '' || isLoading) return;
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', text: inputText };
+    const userMsgText = inputText;
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', text: userMsgText };
+    
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsLoading(true);
 
     try {
-      const result = await chatRef.current.sendMessage(inputText);
-      const text = result.response.text();
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', text: text }]);
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: { 
+          action: 'discussionChat', 
+          payload: { 
+            history: apiHistoryRef.current, 
+            message: userMsgText 
+          } 
+        }
+      });
+
+      if (error) throw error;
+      
+      const responseText = data.text;
+
+      // Push exactly what was exchanged to maintain context logic
+      apiHistoryRef.current.push(
+         { role: 'user', parts: [{ text: userMsgText }] },
+         { role: 'model', parts: [{ text: responseText }] }
+      );
+
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', text: responseText }]);
     } catch (error) {
-      console.error(error);
+      console.error("AI Partner Send Error:", error);
     } finally {
       setIsLoading(false);
     }

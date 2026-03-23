@@ -167,6 +167,17 @@ Sadece JSON döndür: { "focus": "...", "importance": "...", "story": "...", "me
          break;
       }
 
+      case 'discussionChat': {
+        const { history, message } = payload;
+        const chat = model.startChat({
+          history: history || []
+        });
+        const result = await chat.sendMessage(message);
+        const text = await result.response.text();
+        resultData = { text };
+        break;
+      }
+
       default:
         throw new Error(`Unknown action: ${action}`);
     }

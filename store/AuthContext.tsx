@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../services/supabase';
+import { supabase, supabaseUrl } from '../services/supabase';
 
 interface AuthContextType {
   session: Session | null;
@@ -41,9 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       WebBrowser.maybeCompleteAuthSession();
     }
 
-    const envUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-
-    if (!envUrl) {
+    if (!supabaseUrl) {
       setConnectionError('Supabase URL bulunamadı. .env dosyasını kontrol edin.');
     }
 
